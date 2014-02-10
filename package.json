@@ -1,0 +1,19 @@
+{
+  "name": "broccoli-filter",
+  "description": "Helper base class for Broccoli plugins that map input files into output files one-to-one",
+  "version": "0.0.0",
+  "author": "Jo Liss <joliss42@gmail.com>",
+  "main": "index.js",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joliss/broccoli-filter"
+  },
+  "dependencies": {
+    "quick-temp": "~0.0.2",
+    "mkdirp": "~0.3.5",
+    "rsvp": "~3.0.3",
+    "broccoli-transform": "0.0.1",
+    "broccoli": "0.0.12"
+  }
+}
