@@ -110,7 +110,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var self = this
   var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' })
-  return RSVP.Promise.cast(self.processString(string))
+  return RSVP.Promise.cast(self.processString(string, relativePath))
     .then(function (outputString) {
       var outputPath = self.getDestFilePath(relativePath)
       fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: 'utf8' })
