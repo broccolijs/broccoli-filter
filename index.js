@@ -10,8 +10,14 @@ var helpers = require('broccoli').helpers
 module.exports = Filter
 Filter.prototype = Object.create(Transform.prototype)
 Filter.prototype.constructor = Filter
-function Filter (inputTree) {
+function Filter (inputTree, options) {
   this.inputTree = inputTree
+  options = options || {}
+  if (options.extensions != null) this.extensions = options.extensions
+  if (options.targetExtension != null) this.targetExtension = options.targetExtension
+  // We could allow for overwriting this.getDestFilePath as well; just need an
+  // option name that communicates the meaning
+  // We could allow for setting the encoding to something other than utf8
 }
 
 Filter.prototype.getCacheDir = function () {
