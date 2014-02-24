@@ -10,10 +10,10 @@
     "url": "https://github.com/joliss/broccoli-filter"
   },
   "dependencies": {
-    "quick-temp": "~0.0.2",
-    "mkdirp": "~0.3.5",
-    "rsvp": "~3.0.3",
-    "broccoli-transform": "0.0.1",
+    "quick-temp": "^0.1.0",
+    "mkdirp": "^0.3.5",
+    "rsvp": "^3.0.3",
+    "broccoli-transform": "^0.1.0",
     "broccoli": "0.0.12"
   }
 }
