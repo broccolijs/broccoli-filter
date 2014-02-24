@@ -14,6 +14,7 @@
     "mkdirp": "^0.3.5",
     "rsvp": "^3.0.3",
     "broccoli-transform": "^0.1.0",
-    "broccoli": "0.0.12"
+    "broccoli": "0.0.12",
+    "walk-sync": "^0.1.0"
   }
 }

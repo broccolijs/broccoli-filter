@@ -5,6 +5,7 @@ var RSVP = require('rsvp')
 var quickTemp = require('quick-temp')
 var Transform = require('broccoli-transform')
 var helpers = require('broccoli').helpers
+var walkSync = require('walk-sync')
 
 
 module.exports = Filter
@@ -27,7 +28,7 @@ Filter.prototype.getCacheDir = function () {
 Filter.prototype.transform = function (srcDir, destDir) {
   var self = this
 
-  var paths = helpers.walkSync(srcDir)
+  var paths = walkSync(srcDir)
 
   return paths.reduce(function (promise, relativePath) {
     return promise.then(function () {
