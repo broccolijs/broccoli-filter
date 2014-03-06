@@ -1,5 +1,7 @@
 # master
 
+# 0.1.1
+
 * Update `broccoli` dependency
 
 # 0.1.0
