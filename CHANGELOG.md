@@ -1,5 +1,7 @@
 # master
 
+* Update `broccoli` dependency
+
 # 0.1.0
 
 * Pass relativePath argument to `processFile`
