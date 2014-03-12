@@ -1,5 +1,7 @@
 # master
 
+# 0.1.2
+
 * Augment error objects for better error reporting
 
 # 0.1.1
