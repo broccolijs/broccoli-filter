@@ -1,5 +1,7 @@
 # master
 
+* Augment error objects for better error reporting
+
 # 0.1.1
 
 * Update `broccoli` dependency

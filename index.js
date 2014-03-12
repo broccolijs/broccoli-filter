@@ -76,8 +76,18 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
   if (cacheEntry != null && cacheEntry.hash === hash(cacheEntry.inputFiles)) {
     linkFromCache(cacheEntry)
   } else {
-    return Promise.resolve(self.processFile(srcDir, destDir, relativePath))
+    return Promise.resolve()
+      .then(function () {
+        return self.processFile(srcDir, destDir, relativePath)
+      })
+      .catch(function (err) {
+        // Augment for helpful error reporting
+        err.file = relativePath
+        err.treeDir = srcDir
+        throw err
+      })
       .then(function (cacheInfo) {
+        console.error('linking')
         linkToCache(cacheInfo)
       })
   }
