@@ -1,7 +1,7 @@
 var fs = require('fs')
 var path = require('path')
 var mkdirp = require('mkdirp')
-var RSVP = require('rsvp')
+var Promise = require('rsvp').Promise
 var quickTemp = require('quick-temp')
 var Transform = require('broccoli-transform')
 var helpers = require('broccoli').helpers
@@ -42,7 +42,7 @@ Filter.prototype.transform = function (srcDir, destDir) {
         }
       }
     })
-  }, RSVP.resolve())
+  }, Promise.resolve())
 }
 
 Filter.prototype.cleanup = function () {
@@ -76,7 +76,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
   if (cacheEntry != null && cacheEntry.hash === hash(cacheEntry.inputFiles)) {
     linkFromCache(cacheEntry)
   } else {
-    return RSVP.Promise.cast(self.processFile(srcDir, destDir, relativePath))
+    return Promise.resolve(self.processFile(srcDir, destDir, relativePath))
       .then(function (cacheInfo) {
         linkToCache(cacheInfo)
       })
@@ -117,7 +117,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var self = this
   var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' })
-  return RSVP.Promise.cast(self.processString(string, relativePath))
+  return Promise.resolve(self.processString(string, relativePath))
     .then(function (outputString) {
       var outputPath = self.getDestFilePath(relativePath)
       fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: 'utf8' })
