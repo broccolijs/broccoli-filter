@@ -4,7 +4,7 @@ var mkdirp = require('mkdirp')
 var Promise = require('rsvp').Promise
 var quickTemp = require('quick-temp')
 var Transform = require('broccoli-transform')
-var helpers = require('broccoli').helpers
+var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
 
 

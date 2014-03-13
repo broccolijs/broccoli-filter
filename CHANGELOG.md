@@ -1,5 +1,7 @@
 # master
 
+* Use broccoli-kitchen-sink-helpers instead of larger broccoli dependency
+
 # 0.1.3
 
 * Remove stray `console.log` O_O
