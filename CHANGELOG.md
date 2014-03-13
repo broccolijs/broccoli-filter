@@ -1,5 +1,7 @@
 # master
 
+* Remove stray `console.log` O_O
+
 # 0.1.2
 
 * Augment error objects for better error reporting

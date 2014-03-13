@@ -87,7 +87,6 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        console.error('linking')
         linkToCache(cacheInfo)
       })
   }
