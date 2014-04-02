@@ -1,5 +1,7 @@
 # master
 
+* Use new broccoli-writer base class
+
 # 0.1.4
 
 * Use broccoli-kitchen-sink-helpers instead of larger broccoli dependency

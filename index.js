@@ -3,13 +3,13 @@ var path = require('path')
 var mkdirp = require('mkdirp')
 var Promise = require('rsvp').Promise
 var quickTemp = require('quick-temp')
-var Transform = require('broccoli-transform')
+var Writer = require('broccoli-writer')
 var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
 
 
 module.exports = Filter
-Filter.prototype = Object.create(Transform.prototype)
+Filter.prototype = Object.create(Writer.prototype)
 Filter.prototype.constructor = Filter
 function Filter (inputTree, options) {
   this.inputTree = inputTree
@@ -22,32 +22,34 @@ function Filter (inputTree, options) {
 }
 
 Filter.prototype.getCacheDir = function () {
-  return quickTemp.makeOrReuse(this, '_tmpCacheDir')
+  return quickTemp.makeOrReuse(this, 'tmpCacheDir')
 }
 
-Filter.prototype.transform = function (srcDir, destDir) {
+Filter.prototype.write = function (readTree, destDir) {
   var self = this
 
-  var paths = walkSync(srcDir)
+  return readTree(this.inputTree).then(function (srcDir) {
+    var paths = walkSync(srcDir)
 
-  return paths.reduce(function (promise, relativePath) {
-    return promise.then(function () {
-      if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(destDir + '/' + relativePath)
-      } else {
-        if (self.canProcessFile(relativePath)) {
-          return self.processAndCacheFile(srcDir, destDir, relativePath)
+    return paths.reduce(function (promise, relativePath) {
+      return promise.then(function () {
+        if (relativePath.slice(-1) === '/') {
+          mkdirp.sync(destDir + '/' + relativePath)
         } else {
-          fs.linkSync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
+          if (self.canProcessFile(relativePath)) {
+            return self.processAndCacheFile(srcDir, destDir, relativePath)
+          } else {
+            fs.linkSync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
+          }
         }
-      }
-    })
-  }, Promise.resolve())
+      })
+    }, Promise.resolve())
+  })
 }
 
 Filter.prototype.cleanup = function () {
-  quickTemp.remove(this, '_tmpCacheDir')
-  Transform.prototype.cleanup.call(this)
+  quickTemp.remove(this, 'tmpCacheDir')
+  Writer.prototype.cleanup.call(this)
 }
 
 Filter.prototype.canProcessFile = function (relativePath) {

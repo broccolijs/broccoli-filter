@@ -18,7 +18,7 @@
     "quick-temp": "^0.1.0",
     "mkdirp": "^0.3.5",
     "rsvp": "^3.0.3",
-    "broccoli-transform": "^0.1.0",
+    "broccoli-writer": "^0.1.1",
     "walk-sync": "^0.1.0",
     "broccoli-kitchen-sink-helpers": "^0.1.0"
   }
