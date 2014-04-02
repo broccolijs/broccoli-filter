@@ -6,6 +6,7 @@ var quickTemp = require('quick-temp')
 var Writer = require('broccoli-writer')
 var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
+var mapSeries = require('promise-map-series')
 
 
 module.exports = Filter
@@ -31,19 +32,17 @@ Filter.prototype.write = function (readTree, destDir) {
   return readTree(this.inputTree).then(function (srcDir) {
     var paths = walkSync(srcDir)
 
-    return paths.reduce(function (promise, relativePath) {
-      return promise.then(function () {
-        if (relativePath.slice(-1) === '/') {
-          mkdirp.sync(destDir + '/' + relativePath)
+    return mapSeries(paths, function (relativePath) {
+      if (relativePath.slice(-1) === '/') {
+        mkdirp.sync(destDir + '/' + relativePath)
+      } else {
+        if (self.canProcessFile(relativePath)) {
+          return self.processAndCacheFile(srcDir, destDir, relativePath)
         } else {
-          if (self.canProcessFile(relativePath)) {
-            return self.processAndCacheFile(srcDir, destDir, relativePath)
-          } else {
-            fs.linkSync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
-          }
+          fs.linkSync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
         }
-      })
-    }, Promise.resolve())
+      }
+    })
   })
 }
 
