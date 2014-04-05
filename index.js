@@ -39,7 +39,8 @@ Filter.prototype.write = function (readTree, destDir) {
         if (self.canProcessFile(relativePath)) {
           return self.processAndCacheFile(srcDir, destDir, relativePath)
         } else {
-          fs.linkSync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
+          helpers.copyPreserveSync(
+            srcDir + '/' + relativePath, destDir + '/' + relativePath)
         }
       }
     })
@@ -75,7 +76,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
   this._cacheIndex = this._cacheIndex || 0
   var cacheEntry = this._cache[relativePath]
   if (cacheEntry != null && cacheEntry.hash === hash(cacheEntry.inputFiles)) {
-    linkFromCache(cacheEntry)
+    copyFromCache(cacheEntry)
   } else {
     return Promise.resolve()
       .then(function () {
@@ -88,7 +89,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        linkToCache(cacheInfo)
+        copyToCache(cacheInfo)
       })
   }
 
@@ -98,15 +99,19 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     }).join(',')
   }
 
-  function linkFromCache (cacheEntry) {
+  function copyFromCache (cacheEntry) {
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var dest = destDir + '/' + cacheEntry.outputFiles[i]
       mkdirp.sync(path.dirname(dest))
-      fs.linkSync(self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
+      // We may be able to link as an optimization here, because we control
+      // the cache directory; we need to be 100% sure though that we don't try
+      // to hardlink symlinks, as that can lead to directory hardlinks on OS X
+      helpers.copyPreserveSync(
+        self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
     }
   }
 
-  function linkToCache (cacheInfo) {
+  function copyToCache (cacheInfo) {
     var cacheEntry = {
       inputFiles: (cacheInfo || {}).inputFiles || [relativePath],
       outputFiles: (cacheInfo || {}).outputFiles || [self.getDestFilePath(relativePath)],
@@ -115,7 +120,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var cacheFile = (self._cacheIndex++) + ''
       cacheEntry.cacheFiles.push(cacheFile)
-      fs.linkSync(
+      helpers.copyPreserveSync(
         destDir + '/' + cacheEntry.outputFiles[i],
         self.getCacheDir() + '/' + cacheFile)
     }

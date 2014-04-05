@@ -1,5 +1,7 @@
 # master
 
+* Copy instead of hardlinking
+
 # 0.1.5
 
 * Use new broccoli-writer base class
