@@ -1,5 +1,7 @@
 # master
 
+# 0.1.6
+
 * Copy instead of hardlinking
 
 # 0.1.5
