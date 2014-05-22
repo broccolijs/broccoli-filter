@@ -15,6 +15,7 @@ Filter.prototype.constructor = Filter
 function Filter (inputTree, options) {
   this.inputTree = inputTree
   options = options || {}
+  if (options.destDir != null) this.destDir = options.destDir
   if (options.extensions != null) this.extensions = options.extensions
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
   // We could allow for overwriting this.getDestFilePath as well; just need an
@@ -26,21 +27,24 @@ Filter.prototype.getCacheDir = function () {
   return quickTemp.makeOrReuse(this, 'tmpCacheDir')
 }
 
-Filter.prototype.write = function (readTree, destDir) {
+Filter.prototype.write = function (readTree, rootDestDir) {
   var self = this
 
   return readTree(this.inputTree).then(function (srcDir) {
     var paths = walkSync(srcDir)
+    var destPath = rootDestDir
+
+    if (self.options.destDir) { rootDestDir += '/' + self.options.destDir }
 
     return mapSeries(paths, function (relativePath) {
       if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(destDir + '/' + relativePath)
+        mkdirp.sync(destPath + '/' + relativePath)
       } else {
         if (self.canProcessFile(relativePath)) {
-          return self.processAndCacheFile(srcDir, destDir, relativePath)
+          return self.processAndCacheFile(srcDir, destPath, relativePath)
         } else {
           helpers.copyPreserveSync(
-            srcDir + '/' + relativePath, destDir + '/' + relativePath)
+            srcDir + '/' + relativePath, destPath + '/' + relativePath)
         }
       }
     })
