@@ -1,5 +1,7 @@
 # master
 
+* Add `destDir` to allow specify non-root directory for output.
+
 # 0.1.6
 
 * Copy instead of hardlinking
