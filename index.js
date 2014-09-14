@@ -1,13 +1,13 @@
 var fs = require('fs')
 var path = require('path')
-var mkdirp = require('mkdirp')
-var Promise = require('rsvp').Promise
+var rsvp = require('rsvp')
+var Promise = rsvp.Promise
+var mkdir = rsvp.denodeify(fs.mkdir)
 var quickTemp = require('quick-temp')
 var Writer = require('broccoli-writer')
 var helpers = require('broccoli-kitchen-sink-helpers')
-var walkSync = require('walk-sync')
-var mapSeries = require('promise-map-series')
-
+var symlinkOrCopy = rsvp.denodeify(require('symlink-or-copy'))
+var dirToTree = require('dir-to-tree')
 
 module.exports = Filter
 Filter.prototype = Object.create(Writer.prototype)
@@ -28,28 +28,62 @@ Filter.prototype.getCacheDir = function () {
 
 Filter.prototype.write = function (readTree, destDir) {
   var self = this
-
   return readTree(this.inputTree).then(function (srcDir) {
-    var paths = walkSync(srcDir)
-
-    return mapSeries(paths, function (relativePath) {
-      if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(destDir + '/' + relativePath)
-      } else {
-        if (self.canProcessFile(relativePath)) {
-          return self.processAndCacheFile(srcDir, destDir, relativePath)
-        } else {
-          helpers.copyPreserveSync(
-            srcDir + '/' + relativePath, destDir + '/' + relativePath)
-        }
-      }
-    })
+    var root = dirToTree.sync(srcDir)
+    self.markProcessable(root)
+    return self.processNode(srcDir, destDir, root)
   })
 }
 
 Filter.prototype.cleanup = function () {
   quickTemp.remove(this, 'tmpCacheDir')
   Writer.prototype.cleanup.call(this)
+}
+
+//This function recursively figures out if each node in the tree contains
+//children that needs to be processed/filtered. If we have directories that do
+//not contain any files to be filtered, we can simply symlink the entire
+//directory.
+Filter.prototype.markProcessable = function(node) {
+  var self = this
+  node.processable = false
+  node.children.forEach(function(child) {
+    if (child.children) {
+      self.markProcessable(child)
+    } else {
+      child.processable = self.canProcessFile(child.relativePath)
+    }
+    if (child.processable) {
+      node.processable = true
+    }
+  })
+}
+
+Filter.prototype.processNode = function(srcDir, destDir, node) {
+  var self = this
+  if (node.processable) {
+    return mkdir(destDir + '/' + node.relativePath)
+      .catch(function(e) {
+        if (e.code !== 'EEXIST') {
+          throw e
+        }
+      })
+      .then(function() {
+        return Promise.all(node.children.map(function(child) {
+          if (child.children) {
+            return self.processNode(srcDir, destDir, child)
+          } else {
+            if (child.processable) {
+              return self.processAndCacheFile(srcDir, destDir, child.relativePath)
+            } else {
+              return symlinkOrCopy.sync(srcDir + '/' + child.relativePath, destDir + '/' + child.relativePath)
+            }
+          }
+        }))
+      })
+  } else {
+    return symlinkOrCopy.sync(srcDir + '/' + node.relativePath, destDir + '/' + node.relativePath)
+  }
 }
 
 Filter.prototype.canProcessFile = function (relativePath) {
@@ -102,12 +136,11 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
   function copyFromCache (cacheEntry) {
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var dest = destDir + '/' + cacheEntry.outputFiles[i]
-      mkdirp.sync(path.dirname(dest))
+
       // We may be able to link as an optimization here, because we control
       // the cache directory; we need to be 100% sure though that we don't try
       // to hardlink symlinks, as that can lead to directory hardlinks on OS X
-      helpers.copyPreserveSync(
-        self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
+      symlinkOrCopy.sync(self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
     }
   }
 
