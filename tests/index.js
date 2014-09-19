@@ -120,5 +120,20 @@ describe('broccoli-filter', function() {
         done(err);
       });
     });
+
+    it('attaches error information if processFile errors', function(done) {
+      var error = 'Oh No!';
+      sinon.stub(this.filter, 'processFile').throws(error);
+      this.filter.processAndCacheFile(sourcePath, destDir, 'first.js').catch(function(err) {
+        expect(this.filter.processFile.calledOnce).to.be.ok();
+        expect(err.name).to.be('Oh No!');
+        expect(err.file).to.be('first.js');
+        expect(err.treeDir).to.be(sourcePath);
+        done();
+      }.bind(this)).catch(function(err) {
+        done(err);
+      });
+    });
+
   });
 });
