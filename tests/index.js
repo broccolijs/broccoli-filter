@@ -4,13 +4,10 @@ var Filter    = require('../index');
 var broccoli  = require('broccoli');
 var expect    = require('expect.js');
 var sinon     = require('sinon');
-var ms        = require('mocha-subject');
 var RSVP      = require('rsvp');
 var quickTemp = require('quick-temp')
 var path      = require('path');
 var fs        = require('fs');
-
-ms.infect();
 
 DummyFilter.prototype = Object.create(Filter.prototype)
 DummyFilter.prototype.constructor = DummyFilter
@@ -28,8 +25,8 @@ describe('broccoli-filter', function() {
   var sourcePath = 'tests/fixtures',
       builder;
 
-  subject('filter', function() {
-    return new DummyFilter(sourcePath, {extensions: ['js']});
+  beforeEach(function() {
+    this.filter = new DummyFilter(sourcePath, {extensions: ['js']})
   });
 
   afterEach(function() {
@@ -50,7 +47,6 @@ describe('broccoli-filter', function() {
 
     expect(fn).to.throwError(/provide extensions/);
   });
-
 
   describe('write', function() {
     var destDir, readIt;
@@ -95,5 +91,34 @@ describe('broccoli-filter', function() {
 
       expect(this.filter.getDestFilePath('foo.coffee')).to.be('foo.js');
     })
+  });
+
+  describe('processAndCacheFile', function() {
+    var destDir;
+
+    beforeEach(function() {
+      destDir = quickTemp.makeOrReuse(this.filter, 'tmpDestDir');
+    });
+
+    afterEach(function() {
+      quickTemp.remove(this.filter, 'tmpDestDir');
+      this.filter.cleanup();
+    });
+
+    it('reads the file from srcDir, writes to destDir, and caches', function(done) {
+      this.filter.processAndCacheFile(sourcePath, destDir, 'first.js').then(function() {
+        var filter = this.filter;
+        expect(fs.existsSync(path.join(destDir, 'first.js'))).to.be.ok();
+        var cache = filter._cache['first.js'];
+        expect(cache['inputFiles'][0]).to.be('first.js');
+        expect(cache['outputFiles'][0]).to.be('first.js');
+        expect(cache['cacheFiles'][0]).to.be('0');
+        done();
+      }.bind(this)).catch(function(err) {
+        done(err);
+      }).catch(function(err) {
+        done(err);
+      });
+    });
   });
 });
