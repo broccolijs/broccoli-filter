@@ -129,6 +129,7 @@ describe('broccoli-filter', function() {
         expect(err.name).to.be('Oh No!');
         expect(err.file).to.be('first.js');
         expect(err.treeDir).to.be(sourcePath);
+        this.filter.processFile.restore();
         done();
       }.bind(this)).catch(function(err) {
         done(err);
