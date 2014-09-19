@@ -7,6 +7,8 @@ var sinon     = require('sinon');
 var ms        = require('mocha-subject');
 var RSVP      = require('rsvp');
 var quickTemp = require('quick-temp')
+var path      = require('path');
+var fs        = require('fs');
 
 ms.infect();
 
@@ -27,7 +29,7 @@ describe('broccoli-filter', function() {
       builder;
 
   subject('filter', function() {
-    return new DummyFilter(sourcePath);
+    return new DummyFilter(sourcePath, {extensions: ['js']});
   });
 
   afterEach(function() {
@@ -41,23 +43,36 @@ describe('broccoli-filter', function() {
     return builder.build();
   };
 
+  it('throws an error if no extensions provided', function() {
+    var fn = function() {
+      new DummyFilter(sourcePath);
+    };
+
+    expect(fn).to.throwError(/provide extensions/);
+  });
+
+
   describe('write', function() {
-    var destDir;
+    var destDir, readIt;
     beforeEach(function() {
       destDir = quickTemp.makeOrReuse(this.filter, 'tmpDestDir');
+      readIt = sinon.stub().returns(RSVP.resolve(sourcePath));
+      return this.filter.write(readIt, destDir)
     });
+
     afterEach(function() {
       quickTemp.remove(this.filter, 'tmpDestDir');
       this.filter.cleanup();
     });
 
     it('reads the tree', function() {
-      var readIt = sinon.stub().returns(RSVP.resolve(sourcePath));
-
-      this.filter.write(readIt, destDir);
-
       expect(readIt.calledOnce).to.be.ok();
+      expect(readIt.calledWith(sourcePath)).to.be.ok();
+    });
+
+    it('makes directories in destDir', function() {
+      var subPath = path.join(destDir, 'sub');
+      expect(fs.statSync(subPath).isDirectory()).to.be.ok();
     });
   });
-
 });
