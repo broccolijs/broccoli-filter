@@ -75,4 +75,25 @@ describe('broccoli-filter', function() {
       expect(fs.statSync(subPath).isDirectory()).to.be.ok();
     });
   });
+
+  describe('getDestFilePath', function() {
+    it('is null if the filter does not have extensions', function() {
+      this.filter.extensions = [];
+
+      expect(this.filter.getDestFilePath('foo.js')).to.be(null);
+    });
+
+    it("is same relativePath as provided if extensions but no targetExtension", function() {
+      this.filter.extensions = ['js'];
+
+      expect(this.filter.getDestFilePath('foo.js')).to.be('foo.js');
+    });
+
+    it("is same relativePath but with targetExtension in place of extension", function() {
+      this.filter.extensions = ['coffee'];
+      this.filter.targetExtension = 'js';
+
+      expect(this.filter.getDestFilePath('foo.coffee')).to.be('foo.js');
+    })
+  });
 });
