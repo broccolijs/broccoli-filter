@@ -7,6 +7,7 @@ var Writer = require('broccoli-writer')
 var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
 var mapSeries = require('promise-map-series')
+var symlinkOrCopySync = require('symlink-or-copy').sync
 
 
 module.exports = Filter
@@ -39,8 +40,7 @@ Filter.prototype.write = function (readTree, destDir) {
         if (self.canProcessFile(relativePath)) {
           return self.processAndCacheFile(srcDir, destDir, relativePath)
         } else {
-          helpers.copyPreserveSync(
-            srcDir + '/' + relativePath, destDir + '/' + relativePath)
+          symlinkOrCopySync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
         }
       }
     })
@@ -76,7 +76,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
   this._cacheIndex = this._cacheIndex || 0
   var cacheEntry = this._cache[relativePath]
   if (cacheEntry != null && cacheEntry.hash === hash(cacheEntry.inputFiles)) {
-    copyFromCache(cacheEntry)
+    symlinkOrCopyFromCache(cacheEntry)
   } else {
     return Promise.resolve()
       .then(function () {
@@ -89,7 +89,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        copyToCache(cacheInfo)
+        symlinkOrCopyToCache(cacheInfo)
       })
   }
 
@@ -99,19 +99,18 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     }).join(',')
   }
 
-  function copyFromCache (cacheEntry) {
+  function symlinkOrCopyFromCache (cacheEntry) {
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var dest = destDir + '/' + cacheEntry.outputFiles[i]
       mkdirp.sync(path.dirname(dest))
       // We may be able to link as an optimization here, because we control
       // the cache directory; we need to be 100% sure though that we don't try
       // to hardlink symlinks, as that can lead to directory hardlinks on OS X
-      helpers.copyPreserveSync(
-        self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
+      symlinkOrCopySync(self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
     }
   }
 
-  function copyToCache (cacheInfo) {
+  function symlinkOrCopyToCache (cacheInfo) {
     var cacheEntry = {
       inputFiles: (cacheInfo || {}).inputFiles || [relativePath],
       outputFiles: (cacheInfo || {}).outputFiles || [self.getDestFilePath(relativePath)],
@@ -120,7 +119,8 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var cacheFile = (self._cacheIndex++) + ''
       cacheEntry.cacheFiles.push(cacheFile)
-      helpers.copyPreserveSync(
+
+      symlinkOrCopySync(
         destDir + '/' + cacheEntry.outputFiles[i],
         self.getCacheDir() + '/' + cacheFile)
     }
