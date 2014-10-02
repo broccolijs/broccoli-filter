@@ -15,6 +15,8 @@ Filter.prototype = Object.create(Writer.prototype)
 Filter.prototype.constructor = Filter
 function Filter (inputTree, options) {
   this.inputTree = inputTree
+  this._fileDigestCache = {};
+  this._oldCacheDirs = {};
   options = options || {}
   if (options.extensions != null) this.extensions = options.extensions
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
@@ -34,9 +36,7 @@ Filter.prototype.write = function (readTree, destDir) {
     var paths = walkSync(srcDir)
 
     return mapSeries(paths, function (relativePath) {
-      if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(destDir + '/' + relativePath)
-      } else {
+      if (relativePath.slice(-1) !== '/') {
         if (self.canProcessFile(relativePath)) {
           return self.processAndCacheFile(srcDir, destDir, relativePath)
         } else {
@@ -73,7 +73,6 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
   var self = this
 
   this._cache = this._cache || {}
-  this._cacheIndex = this._cacheIndex || 0
   var cacheEntry = this._cache[relativePath]
   if (cacheEntry != null && cacheEntry.hash === hash(cacheEntry.inputFiles)) {
     symlinkOrCopyFromCache(cacheEntry)
@@ -89,13 +88,14 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        symlinkOrCopyToCache(cacheInfo)
+        var cacheEntry = saveCacheEntry(cacheInfo)
+        symlinkOrCopyFromCache(cacheEntry)
       })
   }
 
   function hash (filePaths) {
     return filePaths.map(function (filePath) {
-      return helpers.hashTree(srcDir + '/' + filePath)
+      return helpers.hashTree(srcDir + '/' + filePath, self._fileDigestCache)
     }).join(',')
   }
 
@@ -106,35 +106,33 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
       // We may be able to link as an optimization here, because we control
       // the cache directory; we need to be 100% sure though that we don't try
       // to hardlink symlinks, as that can lead to directory hardlinks on OS X
-      symlinkOrCopySync(self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
+      symlinkOrCopySync(self.getCacheDir() + '/' + cacheEntry.outputFiles[i], dest)
     }
   }
 
-  function symlinkOrCopyToCache (cacheInfo) {
+  function saveCacheEntry(cacheInfo) {
     var cacheEntry = {
       inputFiles: (cacheInfo || {}).inputFiles || [relativePath],
       outputFiles: (cacheInfo || {}).outputFiles || [self.getDestFilePath(relativePath)],
-      cacheFiles: []
     }
-    for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
-      var cacheFile = (self._cacheIndex++) + ''
-      cacheEntry.cacheFiles.push(cacheFile)
 
-      symlinkOrCopySync(
-        destDir + '/' + cacheEntry.outputFiles[i],
-        self.getCacheDir() + '/' + cacheFile)
-    }
     cacheEntry.hash = hash(cacheEntry.inputFiles)
     self._cache[relativePath] = cacheEntry
+
+    return cacheEntry;
   }
 }
 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var self = this
-  var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' })
-  return Promise.resolve(self.processString(string, relativePath))
+  var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' });
+
+  return Promise.resolve(self.processString(string, relativePath, srcDir))
     .then(function (outputString) {
-      var outputPath = self.getDestFilePath(relativePath)
-      fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: 'utf8' })
+      var outputPath = self.getDestFilePath(relativePath),
+          fullOutputPath = self.getCacheDir() + '/' + outputPath;
+
+      mkdirp.sync(path.dirname(fullOutputPath));
+      fs.writeFileSync(fullOutputPath, outputString, { encoding: 'utf8' })
     })
 }
