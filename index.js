@@ -36,7 +36,9 @@ Filter.prototype.write = function (readTree, destDir) {
     var paths = walkSync(srcDir)
 
     return mapSeries(paths, function (relativePath) {
-      if (relativePath.slice(-1) !== '/') {
+      if (relativePath.slice(-1) === '/') {
+        mkdirp.sync(destDir + '/' + relativePath)
+      } else {
         if (self.canProcessFile(relativePath)) {
           return self.processAndCacheFile(srcDir, destDir, relativePath)
         } else {
