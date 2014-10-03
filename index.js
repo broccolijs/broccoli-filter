@@ -15,7 +15,7 @@ Filter.prototype = Object.create(Writer.prototype)
 Filter.prototype.constructor = Filter
 function Filter (inputTree, options) {
   this.inputTree = inputTree
-  this._fileDigestCache = {};
+  this._hashTreeOptions = { digestCache: {} };
   this._oldCacheDirs = {};
   options = options || {}
   if (options.extensions != null) this.extensions = options.extensions
