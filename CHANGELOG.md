@@ -1,5 +1,7 @@
 # master
 
+* Update dependency to deal with symlinks correctly
+
 # 0.1.6
 
 * Copy instead of hardlinking
