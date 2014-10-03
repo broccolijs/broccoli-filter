@@ -97,7 +97,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
 
   function hash (filePaths) {
     return filePaths.map(function (filePath) {
-      return helpers.hashTree(srcDir + '/' + filePath, self._fileDigestCache)
+      return helpers.hashTree(srcDir + '/' + filePath, self._hashTreeOptions)
     }).join(',')
   }
 
