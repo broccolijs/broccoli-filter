@@ -20,7 +20,7 @@
     "rsvp": "^3.0.3",
     "broccoli-writer": "^0.1.1",
     "walk-sync": "^0.1.0",
-    "broccoli-kitchen-sink-helpers": "^0.2.0",
+    "broccoli-kitchen-sink-helpers": "^0.2.5",
     "promise-map-series": "^0.2.0"
   }
 }
