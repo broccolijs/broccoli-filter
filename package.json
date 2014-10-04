@@ -14,6 +14,9 @@
     "filter",
     "cache"
   ],
+  "scripts": {
+    "test": "mocha tests/"
+  },
   "dependencies": {
     "quick-temp": "^0.1.0",
     "mkdirp": "^0.3.5",
@@ -22,5 +25,11 @@
     "walk-sync": "^0.1.0",
     "broccoli-kitchen-sink-helpers": "^0.2.5",
     "promise-map-series": "^0.2.0"
+  },
+  "devDependencies": {
+    "broccoli": "^0.12.3",
+    "expect.js": "^0.3.1",
+    "mocha": "^1.21.4",
+    "sinon": "^1.10.3"
   }
 }

@@ -20,6 +20,9 @@ function Filter (inputTree, options) {
   // We could allow for overwriting this.getDestFilePath as well; just need an
   // option name that communicates the meaning
   // We could allow for setting the encoding to something other than utf8
+  if (!this.extensions) {
+    throw 'You must provide extensions to broccoli-filter as an array of strings'
+  }
 }
 
 Filter.prototype.getCacheDir = function () {
@@ -48,6 +51,8 @@ Filter.prototype.write = function (readTree, destDir) {
 }
 
 Filter.prototype.cleanup = function () {
+  this._cache = null;
+  this._cacheIndex = null;
   quickTemp.remove(this, 'tmpCacheDir')
   Writer.prototype.cleanup.call(this)
 }
@@ -89,7 +94,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        copyToCache(cacheInfo)
+        return copyToCache(cacheInfo)
       })
   }
 
@@ -127,6 +132,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     cacheEntry.hash = hash(cacheEntry.inputFiles)
     self._cache[relativePath] = cacheEntry
   }
+
 }
 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
@@ -134,7 +140,8 @@ Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' })
   return Promise.resolve(self.processString(string, relativePath))
     .then(function (outputString) {
-      var outputPath = self.getDestFilePath(relativePath)
-      fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: 'utf8' })
+      var outputPath   = self.getDestFilePath(relativePath)
+      var destFilePath = path.join(destDir, outputPath)
+      fs.writeFileSync(destFilePath, outputString, { encoding: 'utf8' })
     })
 }
