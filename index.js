@@ -29,6 +29,10 @@ Filter.prototype.getCacheDir = function () {
   return quickTemp.makeOrReuse(this, 'tmpCacheDir')
 }
 
+Filter.prototype.getCachedFilepath = function (relativePath, hashForSourceFile) {
+  return this.getDestFilePath(relativePath) + '--' + hashForSourceFile;
+}
+
 Filter.prototype.write = function (readTree, destDir) {
   var self = this
 
@@ -72,16 +76,21 @@ Filter.prototype.getDestFilePath = function (relativePath) {
 }
 
 Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) {
-  var self = this
+  var self = this,
+      hashForSourceFile = hashFile(srcDir + '/' + relativePath),
+      cacheEntry;
 
   this._cache = this._cache || {}
-  var cacheEntry = this._cache[relativePath]
-  if (cacheEntry != null && cacheEntry.hash === hash(cacheEntry.inputFiles)) {
+  this._cache[relativePath] = this._cache[relativePath] || {};
+
+  cacheEntry = this._cache[relativePath][hashForSourceFile];
+
+  if (cacheEntry != null) {
     symlinkOrCopyFromCache(cacheEntry)
   } else {
     return Promise.resolve()
       .then(function () {
-        return self.processFile(srcDir, destDir, relativePath)
+        return self.processFile(srcDir, relativePath, hashForSourceFile);
       })
       .catch(function (err) {
         // Augment for helpful error reporting
@@ -90,51 +99,66 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        var cacheEntry = saveCacheEntry(cacheInfo)
+        var cacheEntry = buildCacheEntry(cacheInfo, hashForSourceFile);
+        self._cache[relativePath][hashForSourceFile] = cacheEntry;
         symlinkOrCopyFromCache(cacheEntry)
       })
   }
 
-  function hash (filePaths) {
-    return filePaths.map(function (filePath) {
-      return helpers.hashTree(srcDir + '/' + filePath, self._hashTreeOptions)
-    }).join(',')
+  function hashFile(filePath) {
+    return helpers.hashTree(filePath, self._hashTreeOptions)
   }
 
   function symlinkOrCopyFromCache (cacheEntry) {
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
-      var dest = destDir + '/' + cacheEntry.outputFiles[i]
+      var cachedSource = self.getCacheDir() + '/' + cacheEntry.cachedFiles[i],
+          dest = destDir + '/' + cacheEntry.outputFiles[i];
+
       mkdirp.sync(path.dirname(dest))
+
       // We may be able to link as an optimization here, because we control
       // the cache directory; we need to be 100% sure though that we don't try
       // to hardlink symlinks, as that can lead to directory hardlinks on OS X
-      symlinkOrCopySync(self.getCacheDir() + '/' + cacheEntry.outputFiles[i], dest)
+      symlinkOrCopySync(cachedSource, dest)
     }
   }
 
-  function saveCacheEntry(cacheInfo) {
-    var cacheEntry = {
-      inputFiles: (cacheInfo || {}).inputFiles || [relativePath],
-      outputFiles: (cacheInfo || {}).outputFiles || [self.getDestFilePath(relativePath)],
+  function buildCacheEntry(cacheInfo, hashForSourceFile) {
+    cacheInfo = cacheInfo || {};
+
+    // Prevent previously allowable behavior?
+    if (cacheInfo.inputFiles && cacheInfo.inputFiles.length > 1) {
+      throw new Error("broccoli-filter cannot handle more than one input file");
+    } else if (cacheInfo.inputFiles && cacheInfo.inputFiles[0] != relativePath) {
+      throw new Error("broccoli-filter doesn't know how to handle input file not matching the currently processed relativePath");
     }
 
-    cacheEntry.hash = hash(cacheEntry.inputFiles)
-    self._cache[relativePath] = cacheEntry
+    var cacheEntry = {
+      inputFile: relativePath,
+      inputFileHash: hashForSourceFile,
+
+      cachedFiles: cacheInfo.cachedFiles || [self.getCachedFilepath(relativePath, hashForSourceFile)],
+      outputFiles: cacheInfo.outputFiles || [self.getDestFilePath(relativePath)]
+    }
 
     return cacheEntry;
   }
 }
 
-Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
+Filter.prototype.processFile = function (srcDir, relativePath, hashForSourceFile) {
   var self = this
   var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' });
 
   return Promise.resolve(self.processString(string, relativePath, srcDir))
     .then(function (outputString) {
-      var outputPath = self.getDestFilePath(relativePath),
-          fullOutputPath = self.getCacheDir() + '/' + outputPath;
+      var cacheFileDest = self.getCachedFilepath(relativePath, hashForSourceFile);
 
-      mkdirp.sync(path.dirname(fullOutputPath));
-      fs.writeFileSync(fullOutputPath, outputString, { encoding: 'utf8' })
+      mkdirp.sync(self.getCacheDir() + '/' + path.dirname(cacheFileDest));
+      fs.writeFileSync(self.getCacheDir() + '/' + cacheFileDest, outputString, { encoding: 'utf8' })
+
+      return {
+        cachedFiles: [cacheFileDest],
+        outputFiles: [self.getDestFilePath(relativePath)]
+      }
     })
 }

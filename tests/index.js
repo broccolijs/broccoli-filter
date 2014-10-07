@@ -193,12 +193,58 @@ describe('broccoli-filter', function(){
           expect(processStringCount).to.eql(1);
         })
         .then(function() {
+          // Modify the mtime, but keep the same content
           fs.writeFileSync(existingJSFile, fs.readFileSync(existingJSFile));
 
           return builder.build()
         })
         .finally(function() {
           expect(processStringCount).to.eql(1);
+        });
+    });
+
+    it('is not called if an existing file is modified to a previous state (more than one build old)', function(){
+      var processStringCount = 0;
+      var contentToRender = [
+        existingJSContent,
+        'other 1',
+        'yet another 2',
+        existingJSContent
+      ];
+
+      var tree = runAnonFilter(sourcePath, {
+        extensions: ['js']
+      }, {
+        processString: function(content, relativePath) {
+          processStringCount++;
+          return 'always different result ' + processStringCount;
+        }
+      })
+
+      builder = new broccoli.Builder(tree);
+
+      return builder.build()
+        .then(function() {
+          expect(processStringCount).to.eql(1);
+          fs.writeFileSync(existingJSFile, contentToRender[processStringCount]);
+
+          return builder.build()
+        })
+        .then(function() {
+          expect(processStringCount).to.eql(2);
+          fs.writeFileSync(existingJSFile, contentToRender[processStringCount]);
+
+          return builder.build()
+        })
+        .then(function() {
+          expect(processStringCount).to.eql(3);
+          fs.writeFileSync(existingJSFile, contentToRender[processStringCount]);
+
+          return builder.build()
+        })
+        .finally(function() {
+          // Last build did not rebuild, the file should have been cached
+          expect(processStringCount).to.eql(3);
         });
     });
 
@@ -236,7 +282,7 @@ describe('broccoli-filter', function(){
         });
     });
 
-    it('does not call updateCache again if input is changed but filtered (via extensions)', function(){
+    it('is not called again if input is changed but filtered (via extensions)', function(){
       var processStringCount = 0;
       var tree = runAnonFilter(sourcePath, {
         extensions: ['js']
@@ -264,40 +310,38 @@ describe('broccoli-filter', function(){
     });
   });
 
-  // describe('other', function() {
-    it('can write files to destDir, and they will be in the final output', function(){
-      var tree = runAnonFilter(sourcePath, {
+  it('can write files to destDir, and they will be in the final output', function(){
+    var tree = runAnonFilter(sourcePath, {
+      extensions: ['js']
+    }, {
+      processString: function(content, relativePath) {
+        return 'zomg blammo';
+      }
+    });
+
+    builder = new broccoli.Builder(tree);
+    return builder.build().then(function(dir) {
+      expect(fs.readFileSync(dir.directory + '/' + existingJSRelativePath, {encoding: 'utf8'})).to.eql('zomg blammo');
+    });
+  });
+
+  it('can return a promise that is resolved', function(){
+    var thenCalled = false;
+    var tree = runAnonFilter(sourcePath, {
         extensions: ['js']
       }, {
-        processString: function(content, relativePath) {
-          return 'zomg blammo';
-        }
-      });
-
-      builder = new broccoli.Builder(tree);
-      return builder.build().then(function(dir) {
-        expect(fs.readFileSync(dir.directory + '/' + existingJSRelativePath, {encoding: 'utf8'})).to.eql('zomg blammo');
-      });
+      processString: function(content, relativePath) {
+        return {then: function(callback) {
+          thenCalled = true;
+          callback();
+          return content;
+        }};
+      }
     });
 
-    it('can return a promise that is resolved', function(){
-      var thenCalled = false;
-      var tree = runAnonFilter(sourcePath, {
-          extensions: ['js']
-        }, {
-        processString: function(content, relativePath) {
-          return {then: function(callback) {
-            thenCalled = true;
-            callback();
-            return content;
-          }};
-        }
-      });
-
-      builder = new broccoli.Builder(tree);
-      return builder.build().then(function(dir) {
-        expect(thenCalled).to.be.ok();
-      });
+    builder = new broccoli.Builder(tree);
+    return builder.build().then(function(dir) {
+      expect(thenCalled).to.be.ok();
     });
-  // });
+  });
 });
