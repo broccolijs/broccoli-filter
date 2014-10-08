@@ -29,27 +29,32 @@ Filter.prototype.getCacheDir = function () {
   return quickTemp.makeOrReuse(this, 'tmpCacheDir')
 }
 
-Filter.prototype.getCachedFilepath = function (relativePath, hashForSourceFile) {
-  return this.getDestFilePath(relativePath) + '--' + hashForSourceFile;
+Filter.prototype.getCachedFilepath = function (relativePath, hashOfInput) {
+  return this.getDestFilePath(relativePath) + '--' + hashOfInput;
 }
 
 Filter.prototype.write = function (readTree, destDir) {
   var self = this
 
   return readTree(this.inputTree).then(function (srcDir) {
-    var paths = walkSync(srcDir)
+    return self.processAllFilesIn(srcDir, destDir);
+  })
+}
 
-    return mapSeries(paths, function (relativePath) {
-      if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(destDir + '/' + relativePath)
+Filter.prototype.processAllFilesIn = function(srcDir, destDir) {
+  var self = this
+  var paths = walkSync(srcDir)
+
+  return mapSeries(paths, function (relativePath) {
+    if (relativePath.slice(-1) === '/') {
+      mkdirp.sync(destDir + '/' + relativePath)
+    } else {
+      if (self.canProcessFile(relativePath)) {
+        return self.processAndCacheFile(srcDir, destDir, relativePath)
       } else {
-        if (self.canProcessFile(relativePath)) {
-          return self.processAndCacheFile(srcDir, destDir, relativePath)
-        } else {
-          symlinkOrCopySync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
-        }
+        symlinkOrCopySync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
       }
-    })
+    }
   })
 }
 
@@ -75,22 +80,28 @@ Filter.prototype.getDestFilePath = function (relativePath) {
   return null
 }
 
-Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) {
-  var self = this,
-      hashForSourceFile = hashFile(srcDir + '/' + relativePath),
-      cacheEntry;
+Filter.prototype.getHashForInput = function(srcDir, relativePath) {
+  return helpers.hashTree(srcDir + '/' + relativePath, this._hashTreeOptions);
+}
 
+Filter.prototype.getCacheEntryForPathAndHash = function(relativePath, hashOfInput) {
   this._cache = this._cache || {}
   this._cache[relativePath] = this._cache[relativePath] || {};
 
-  cacheEntry = this._cache[relativePath][hashForSourceFile];
+  return this._cache[relativePath][hashOfInput];
+}
+
+Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) {
+  var self = this,
+      hashOfInput = this.getHashForInput(srcDir, relativePath),
+      cacheEntry = this.getCacheEntryForPathAndHash(relativePath, hashOfInput)
 
   if (cacheEntry != null) {
     symlinkOrCopyFromCache(cacheEntry)
   } else {
     return Promise.resolve()
       .then(function () {
-        return self.processFile(srcDir, relativePath, hashForSourceFile);
+        return self.processFile(srcDir, relativePath, hashOfInput);
       })
       .catch(function (err) {
         // Augment for helpful error reporting
@@ -99,14 +110,10 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        var cacheEntry = buildCacheEntry(cacheInfo, hashForSourceFile);
-        self._cache[relativePath][hashForSourceFile] = cacheEntry;
+        var cacheEntry = self.buildCacheEntry(cacheInfo, relativePath, hashOfInput);
+        self._cache[relativePath][hashOfInput] = cacheEntry;
         symlinkOrCopyFromCache(cacheEntry)
       })
-  }
-
-  function hashFile(filePath) {
-    return helpers.hashTree(filePath, self._hashTreeOptions)
   }
 
   function symlinkOrCopyFromCache (cacheEntry) {
@@ -122,36 +129,37 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
       symlinkOrCopySync(cachedSource, dest)
     }
   }
+};
 
-  function buildCacheEntry(cacheInfo, hashForSourceFile) {
-    cacheInfo = cacheInfo || {};
 
-    // Prevent previously allowable behavior?
-    if (cacheInfo.inputFiles && cacheInfo.inputFiles.length > 1) {
-      throw new Error("broccoli-filter cannot handle more than one input file");
-    } else if (cacheInfo.inputFiles && cacheInfo.inputFiles[0] != relativePath) {
-      throw new Error("broccoli-filter doesn't know how to handle input file not matching the currently processed relativePath");
-    }
+Filter.prototype.buildCacheEntry = function (cacheInfo, relativePath, hashOfInput) {
+  cacheInfo = cacheInfo || {};
 
-    var cacheEntry = {
-      inputFile: relativePath,
-      inputFileHash: hashForSourceFile,
-
-      cachedFiles: cacheInfo.cachedFiles || [self.getCachedFilepath(relativePath, hashForSourceFile)],
-      outputFiles: cacheInfo.outputFiles || [self.getDestFilePath(relativePath)]
-    }
-
-    return cacheEntry;
+  // Prevent previously allowable behavior?
+  if (cacheInfo.inputFiles && cacheInfo.inputFiles.length > 1) {
+    throw new Error("broccoli-filter cannot handle more than one input file");
+  } else if (cacheInfo.inputFiles && cacheInfo.inputFiles[0] != relativePath) {
+    throw new Error("broccoli-filter doesn't know how to handle input file not matching the currently processed relativePath");
   }
-}
 
-Filter.prototype.processFile = function (srcDir, relativePath, hashForSourceFile) {
+  var cacheEntry = {
+    inputFile: relativePath,
+    inputFileHash: hashOfInput,
+
+    cachedFiles: cacheInfo.cachedFiles || [self.getCachedFilepath(relativePath, hashOfInput)],
+    outputFiles: cacheInfo.outputFiles || [self.getDestFilePath(relativePath)]
+  }
+
+  return cacheEntry;
+};
+
+Filter.prototype.processFile = function (srcDir, relativePath, hashOfInput) {
   var self = this
   var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' });
 
   return Promise.resolve(self.processString(string, relativePath, srcDir))
     .then(function (outputString) {
-      var cacheFileDest = self.getCachedFilepath(relativePath, hashForSourceFile);
+      var cacheFileDest = self.getCachedFilepath(relativePath, hashOfInput);
 
       mkdirp.sync(self.getCacheDir() + '/' + path.dirname(cacheFileDest));
       fs.writeFileSync(self.getCacheDir() + '/' + cacheFileDest, outputString, { encoding: 'utf8' })
