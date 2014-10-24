@@ -1,5 +1,7 @@
 # master
 
+* Add `inputEncoding` and `outputEncoding` options
+
 # 0.1.7
 
 * Update dependency to deal with symlinks correctly

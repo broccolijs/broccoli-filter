@@ -17,9 +17,8 @@ function Filter (inputTree, options) {
   options = options || {}
   if (options.extensions != null) this.extensions = options.extensions
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
-  // We could allow for overwriting this.getDestFilePath as well; just need an
-  // option name that communicates the meaning
-  // We could allow for setting the encoding to something other than utf8
+  this.inputEncoding = options.hasOwnProperty('inputEncoding') ? options.inputEncoding : 'utf8'
+  this.outputEncoding = options.hasOwnProperty('outputEncoding') ? options.outputEncoding : 'utf8'
 }
 
 Filter.prototype.getCacheDir = function () {
@@ -131,10 +130,10 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var self = this
-  var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: 'utf8' })
+  var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: self.inputEncoding })
   return Promise.resolve(self.processString(string, relativePath))
     .then(function (outputString) {
       var outputPath = self.getDestFilePath(relativePath)
-      fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: 'utf8' })
+      fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: self.outputEncoding })
     })
 }
