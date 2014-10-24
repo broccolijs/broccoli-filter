@@ -1,5 +1,7 @@
 # master
 
+* Fix inputEncoding/outputEncoding defaults
+
 # 0.1.8
 
 * Add `inputEncoding` and `outputEncoding` options
