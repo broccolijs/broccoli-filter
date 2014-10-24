@@ -17,6 +17,7 @@ function Filter (inputTree, options) {
   options = options || {}
   if (options.extensions != null) this.extensions = options.extensions
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
+
   this.inputEncoding = options.hasOwnProperty('inputEncoding') ? options.inputEncoding : 'utf8'
   this.outputEncoding = options.hasOwnProperty('outputEncoding') ? options.outputEncoding : 'utf8'
 }
@@ -130,10 +131,10 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var self = this
-  var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: self.inputEncoding })
+  var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: self.inputEncoding || 'utf8' })
   return Promise.resolve(self.processString(string, relativePath))
     .then(function (outputString) {
       var outputPath = self.getDestFilePath(relativePath)
-      fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: self.outputEncoding })
+      fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: self.outputEncoding || 'utf8' })
     })
 }
