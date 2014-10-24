@@ -1,5 +1,7 @@
 # master
 
+# 0.1.9
+
 * Fix inputEncoding/outputEncoding defaults
 
 # 0.1.8
