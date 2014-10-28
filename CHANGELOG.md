@@ -1,5 +1,7 @@
 # master
 
+* Do not override this.inputEncoding/this.outputEncoding if not provided
+
 # 0.1.9
 
 * Fix inputEncoding/outputEncoding defaults

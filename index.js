@@ -17,8 +17,8 @@ function Filter (inputTree, options) {
   options = options || {}
   if (options.extensions != null) this.extensions = options.extensions
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
-  this.inputEncoding = options.inputEncoding
-  this.outputEncoding = options.outputEncoding
+  if (options.inputEncoding !== undefined) this.inputEncoding = options.inputEncoding
+  if (options.outputEncoding !== undefined) this.outputEncoding = options.outputEncoding
 }
 
 Filter.prototype.getCacheDir = function () {
