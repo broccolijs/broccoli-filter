@@ -1,5 +1,7 @@
 # master
 
+* Update dependencies
+
 # 0.1.10
 
 * Do not override this.inputEncoding/this.outputEncoding if not provided
