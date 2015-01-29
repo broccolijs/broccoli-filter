@@ -3,15 +3,12 @@ var path = require('path')
 var mkdirp = require('mkdirp')
 var Promise = require('rsvp').Promise
 var quickTemp = require('quick-temp')
-var Writer = require('broccoli-writer')
 var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
 var mapSeries = require('promise-map-series')
 
 
 module.exports = Filter
-Filter.prototype = Object.create(Writer.prototype)
-Filter.prototype.constructor = Filter
 function Filter (inputTree, options) {
   this.inputTree = inputTree
   options = options || {}
@@ -21,16 +18,13 @@ function Filter (inputTree, options) {
   if (options.outputEncoding !== undefined) this.outputEncoding = options.outputEncoding
 }
 
-Filter.prototype.getCacheDir = function () {
-  return quickTemp.makeOrReuse(this, 'tmpCacheDir')
-}
-
-Filter.prototype.write = function (readTree, destDir) {
+Filter.prototype.rebuild = function () {
   var self = this
 
-  return readTree(this.inputTree).then(function (srcDir) {
-    var paths = walkSync(srcDir)
+  var srcDir = this.inputTree.directory
+  var destDir = this.directory
 
+  var paths = walkSync(srcDir)
     return mapSeries(paths, function (relativePath) {
       if (relativePath.slice(-1) === '/') {
         mkdirp.sync(destDir + '/' + relativePath)
@@ -43,12 +37,6 @@ Filter.prototype.write = function (readTree, destDir) {
         }
       }
     })
-  })
-}
-
-Filter.prototype.cleanup = function () {
-  quickTemp.remove(this, 'tmpCacheDir')
-  Writer.prototype.cleanup.call(this)
 }
 
 Filter.prototype.canProcessFile = function (relativePath) {
@@ -106,7 +94,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
       // the cache directory; we need to be 100% sure though that we don't try
       // to hardlink symlinks, as that can lead to directory hardlinks on OS X
       helpers.copyPreserveSync(
-        self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
+        self.cache + '/' + cacheEntry.cacheFiles[i], dest)
     }
   }
 
@@ -121,7 +109,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
       cacheEntry.cacheFiles.push(cacheFile)
       helpers.copyPreserveSync(
         destDir + '/' + cacheEntry.outputFiles[i],
-        self.getCacheDir() + '/' + cacheFile)
+        self.cache + '/' + cacheFile)
     }
     cacheEntry.hash = hash(cacheEntry.inputFiles)
     self._cache[relativePath] = cacheEntry
