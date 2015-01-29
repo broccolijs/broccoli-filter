@@ -25,18 +25,18 @@ Filter.prototype.rebuild = function () {
   var destDir = this.directory
 
   var paths = walkSync(srcDir)
-    return mapSeries(paths, function (relativePath) {
-      if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(destDir + '/' + relativePath)
+  return mapSeries(paths, function (relativePath) {
+    if (relativePath.slice(-1) === '/') {
+      mkdirp.sync(destDir + '/' + relativePath)
+    } else {
+      if (self.canProcessFile(relativePath)) {
+        return self.processAndCacheFile(srcDir, destDir, relativePath)
       } else {
-        if (self.canProcessFile(relativePath)) {
-          return self.processAndCacheFile(srcDir, destDir, relativePath)
-        } else {
-          helpers.copyPreserveSync(
-            srcDir + '/' + relativePath, destDir + '/' + relativePath)
-        }
+        helpers.copyPreserveSync(
+          srcDir + '/' + relativePath, destDir + '/' + relativePath)
       }
-    })
+    }
+  })
 }
 
 Filter.prototype.canProcessFile = function (relativePath) {
