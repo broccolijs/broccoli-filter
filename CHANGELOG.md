@@ -1,5 +1,7 @@
 # master
 
+* Add support for new `.rebuild` API in addition to old `.read` API
+
 # 0.1.11
 
 * Update dependencies
