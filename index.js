@@ -13,6 +13,9 @@ module.exports = Filter
 Filter.prototype = Object.create(Writer.prototype)
 Filter.prototype.constructor = Filter
 function Filter (inputTree, options) {
+  if (!inputTree) {
+    throw new Error('broccoli-filter must be passed an inputTree, instead it received `undefined`');
+  }
   this.inputTree = inputTree
   options = options || {}
   if (options.extensions != null) this.extensions = options.extensions
