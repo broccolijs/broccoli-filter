@@ -1,5 +1,7 @@
 # master
 
+* Throw on undefined `inputTree`
+
 # 0.1.11
 
 * Update dependencies
