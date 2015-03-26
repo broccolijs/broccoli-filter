@@ -100,8 +100,11 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
       })
       .catch(function (err) {
         // Augment for helpful error reporting
-        err.file = relativePath
-        err.treeDir = srcDir
+        err.broccoliInfo = err.broccoliInfo || {}
+        err.broccoliInfo.file = path.join(srcDir, relativePath)
+        // Compatibility
+        if (err.line != null) err.broccoliInfo.firstLine = err.line
+        if (err.column != null) err.broccoliInfo.firstColumn = err.column
         throw err
       })
       .then(function (cacheInfo) {
