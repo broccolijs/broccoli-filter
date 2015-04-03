@@ -150,7 +150,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var self = this
-  var inputEncoding = (this.inputEncoding === undefined) ? 'utf8' : this.inputEncoding
+  var inputEncoding = (this.inputEncoding === undefined) ? null : this.inputEncoding
   var outputEncoding = (this.outputEncoding === undefined) ? 'utf8' : this.outputEncoding
   var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: inputEncoding })
   return Promise.resolve(self.processString(string, relativePath))
