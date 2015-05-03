@@ -1,7 +1,5 @@
 # master
 
-* Add support for new `.rebuild` API in addition to old `.read` API
-
 # 0.1.12
 
 * Throw on undefined `inputTree`

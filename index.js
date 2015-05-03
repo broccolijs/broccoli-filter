@@ -3,12 +3,15 @@ var path = require('path')
 var mkdirp = require('mkdirp')
 var Promise = require('rsvp').Promise
 var quickTemp = require('quick-temp')
+var Writer = require('broccoli-writer')
 var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
 var mapSeries = require('promise-map-series')
 
 
 module.exports = Filter
+Filter.prototype = Object.create(Writer.prototype)
+Filter.prototype.constructor = Filter
 function Filter (inputTree, options) {
   if (!inputTree) {
     throw new Error('broccoli-filter must be passed an inputTree, instead it received `undefined`');
@@ -21,48 +24,34 @@ function Filter (inputTree, options) {
   if (options.outputEncoding !== undefined) this.outputEncoding = options.outputEncoding
 }
 
-Filter.prototype.rebuild = function () {
+Filter.prototype.getCacheDir = function () {
+  return quickTemp.makeOrReuse(this, 'tmpCacheDir')
+}
+
+Filter.prototype.write = function (readTree, destDir) {
   var self = this
 
-  var paths = walkSync(this.inputPath)
+  return readTree(this.inputTree).then(function (srcDir) {
+    var paths = walkSync(srcDir)
+
     return mapSeries(paths, function (relativePath) {
       if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(self.outputPath + '/' + relativePath)
+        mkdirp.sync(destDir + '/' + relativePath)
       } else {
         if (self.canProcessFile(relativePath)) {
-          return self.processAndCacheFile(self.inputPath, self.outputPath, relativePath)
+          return self.processAndCacheFile(srcDir, destDir, relativePath)
         } else {
           helpers.copyPreserveSync(
-            self.inputPath + '/' + relativePath, self.outputPath + '/' + relativePath)
+            srcDir + '/' + relativePath, destDir + '/' + relativePath)
         }
       }
     })
-}
-
-// Compatibility with Broccoli < 0.14
-// See https://github.com/broccolijs/broccoli/blob/master/docs/new-rebuild-api.md
-Filter.prototype.read = function (readTree) {
-  var self = this
-
-  quickTemp.makeOrRemake(this, 'outputPath')
-  quickTemp.makeOrReuse(this, 'cachePath')
-  this.needsCleanup = true
-
-  return readTree(this.inputTree)
-    .then(function (inputPath) {
-      self.inputPath = inputPath
-      return self.rebuild()
-    })
-    .then(function () {
-      return self.outputPath
-    })
+  })
 }
 
 Filter.prototype.cleanup = function () {
-  if (this.needsCleanup) {
-    quickTemp.remove(this, 'outputPath')
-    quickTemp.remove(this, 'cachePath')
-  }
+  quickTemp.remove(this, 'tmpCacheDir')
+  Writer.prototype.cleanup.call(this)
 }
 
 Filter.prototype.canProcessFile = function (relativePath) {
@@ -81,9 +70,6 @@ Filter.prototype.getDestFilePath = function (relativePath) {
   }
   return null
 }
-
-// To do: Get rid of the srcDir/destDir args because we now have inputPath/outputPath
-// https://github.com/search?q=processAndCacheFile&type=Code&utf8=%E2%9C%93
 
 Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) {
   var self = this
@@ -123,7 +109,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
       // the cache directory; we need to be 100% sure though that we don't try
       // to hardlink symlinks, as that can lead to directory hardlinks on OS X
       helpers.copyPreserveSync(
-        self.cachePath + '/' + cacheEntry.cacheFiles[i], dest)
+        self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
     }
   }
 
@@ -138,7 +124,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
       cacheEntry.cacheFiles.push(cacheFile)
       helpers.copyPreserveSync(
         destDir + '/' + cacheEntry.outputFiles[i],
-        self.cachePath + '/' + cacheFile)
+        self.getCacheDir() + '/' + cacheFile)
     }
     cacheEntry.hash = hash(cacheEntry.inputFiles)
     self._cache[relativePath] = cacheEntry
