@@ -159,3 +159,7 @@ Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
       fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: outputEncoding })
     })
 }
+
+Filter.prototype.processString = function() {
+  throw new Error('When subclassing broccoli-filter you must implement the `processString()` method.');
+};
