@@ -1,5 +1,7 @@
 # master
 
+# 0.1.13
+
 * Improve error message when `processString` isn't overridden in subclass
 
 # 0.1.12
