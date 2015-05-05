@@ -1,5 +1,7 @@
 # master
 
+* Improve performance by symlinking when possible
+
 # 0.1.13
 
 * Improve error message when `processString` isn't overridden in subclass
