@@ -77,8 +77,8 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
   this._cache = this._cache || {}
   this._cacheIndex = this._cacheIndex || 0
   var cacheEntry = this._cache[relativePath]
-  if (cacheEntry != null && cacheEntry.hash === hash(cacheEntry.inputFiles)) {
-    symlinkOrCopyFromCache(cacheEntry)
+  if (cacheEntry != null && cacheEntry.hash === self.hash(cacheEntry.inputFiles, srcDir)) {
+    this.symlinkOrCopyFromCache(cacheEntry, destDir)
   } else {
     return Promise.resolve()
       .then(function () {
@@ -91,41 +91,42 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         throw err
       })
       .then(function (cacheInfo) {
-        copyToCache(cacheInfo)
+        self.copyToCache(cacheInfo, srcDir, relativePath, destDir)
       })
   }
 
-  function hash (filePaths) {
-    return filePaths.map(function (filePath) {
-      return helpers.hashTree(srcDir + '/' + filePath)
-    }).join(',')
-  }
+}
 
-  function symlinkOrCopyFromCache (cacheEntry) {
-    for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
-      var dest = destDir + '/' + cacheEntry.outputFiles[i]
-      mkdirp.sync(path.dirname(dest))
-      symlinkOrCopySync(self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
-    }
-  }
+Filter.prototype.hash = function (filePaths, srcDir) {
+  return filePaths.map(function (filePath) {
+    return helpers.hashTree(srcDir + '/' + filePath)
+  }).join(',')
+}
 
-  function copyToCache (cacheInfo) {
-    var cacheEntry = {
-      inputFiles: (cacheInfo || {}).inputFiles || [relativePath],
-      outputFiles: (cacheInfo || {}).outputFiles || [self.getDestFilePath(relativePath)],
-      cacheFiles: []
-    }
-    for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
-      var cacheFile = (self._cacheIndex++) + ''
-      cacheEntry.cacheFiles.push(cacheFile)
-
-      helpers.copyPreserveSync(
-        destDir + '/' + cacheEntry.outputFiles[i],
-        self.getCacheDir() + '/' + cacheFile)
-    }
-    cacheEntry.hash = hash(cacheEntry.inputFiles)
-    self._cache[relativePath] = cacheEntry
+Filter.prototype.symlinkOrCopyFromCache = function (cacheEntry, destDir) {
+  for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
+    var dest = destDir + '/' + cacheEntry.outputFiles[i]
+    mkdirp.sync(path.dirname(dest))
+    symlinkOrCopySync(this.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
   }
+}
+
+Filter.prototype.copyToCache = function (cacheInfo, srcDir, relativePath, destDir) {
+  var cacheEntry = {
+    inputFiles: (cacheInfo || {}).inputFiles || [relativePath],
+    outputFiles: (cacheInfo || {}).outputFiles || [this.getDestFilePath(relativePath)],
+    cacheFiles: []
+  }
+  for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
+    var cacheFile = (this._cacheIndex++) + ''
+    cacheEntry.cacheFiles.push(cacheFile)
+
+    helpers.copyPreserveSync(
+      destDir + '/' + cacheEntry.outputFiles[i],
+      this.getCacheDir() + '/' + cacheFile)
+  }
+  cacheEntry.hash = this.hash(cacheEntry.inputFiles, srcDir)
+  this._cache[relativePath] = cacheEntry
 }
 
 Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
