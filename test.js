@@ -129,27 +129,35 @@ describe('Filter', function() {
 
     builder = new Builder(awk);
 
-    builder.
-        build().
-        then(function() {
-          expect(read(tree.outputPath + '/dir/README.md')).
-              toBe('Nicest cats in need of homes');
-          expect(read(tree.outputPath + '/dir/foo.js')).
-              toBe('Nicest dogs in need of homes');
-          expect(awk.canProcessFile.calls.count()).toBe(2);
-          disk['dir/CONTRIBUTING.md'] = mockfs.file({
-              contents: 'All dogs go to heaven!', mtime: new Date(1000)});
-          mockfs(disk);
-          builder.build().
-              then(function() {
-                expect(read(tree.outputPath + '/dir/README.md')).
-                    toBe('Nicest cats in need of homes');
-                expect(read(tree.outputPath + '/dir/foo.js')).
-                    toBe('Nicest dogs in need of homes');
-                expect(read(tree.outputPath + '/dir/CONTRIBUTING.md')).
-                    toBe('All cats go to heaven!');
-                expect(awk.canProcessFile.calls.count()).toBe(3);
-              }, done);
-        }, done);
+    builder.build().then(round1, done);
+
+    function round1() {
+      expect(read(tree.outputPath + '/dir/README.md')).
+          toBe('Nicest cats in need of homes');
+      expect(read(tree.outputPath + '/dir/foo.js')).
+          toBe('Nicest dogs in need of homes');
+      expect(awk.canProcessFile.calls.count()).toBe(2);
+      disk['dir/CONTRIBUTING.md'] = mockfs.file({
+          contents: 'All dogs go to heaven!', mtime: new Date(1000)});
+      mockfs(disk);
+      builder.build().then(round2, done);
+    }
+
+    function round2() {
+      expect(read(tree.outputPath + '/dir/README.md')).
+          toBe('Nicest cats in need of homes');
+      expect(read(tree.outputPath + '/dir/foo.js')).
+          toBe('Nicest dogs in need of homes');
+      expect(read(tree.outputPath + '/dir/CONTRIBUTING.md')).
+          toBe('All cats go to heaven!');
+      expect(awk.canProcessFile.calls.count()).toBe(3);
+      mockfs(disk);
+      builder.build().then(round3, done);
+    }
+
+    function round3() {
+      expect(awk.canProcessFile.calls.count()).toBe(3);
+      done();
+    }
   });
 });
