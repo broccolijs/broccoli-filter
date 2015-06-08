@@ -4,7 +4,7 @@
   "description": "Broccoli-filter, implemented ontop of the rebuild api()",
   "main": "filter.js",
   "scripts": {
-    "test": "npm test"
+    "test": "minijasminenode2 ./test.js"
   },
   "repository": {
     "type": "git",
@@ -40,6 +40,7 @@
   "devDependencies": {
     "broccoli": "^0.16.3",
     "minijasminenode2": "^1.0.0",
-    "mocha": "^2.2.5"
+    "mocha": "^2.2.5",
+    "mock-fs": "^2.7.0"
   }
 }
