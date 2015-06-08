@@ -1,0 +1,34 @@
+{
+  "name": "cauliflower-filter",
+  "version": "1.0.0",
+  "description": "Broccoli-filter, implemented ontop of the rebuild api()",
+  "main": "filter.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caitp/cauliflower-filter.git"
+  },
+  "keywords": [
+    "broccoli",
+    "broccoli-filter",
+    "broccoli-helper",
+    "filter",
+    "cache",
+    "cauliflower",
+    "brassica",
+    "oleracea",
+    "eat",
+    "your",
+    "vegetables"
+  ],
+  "author": "Caitlin Potter <caitpotter88@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/caitp/cauliflower-filter/issues"
+  },
+  "homepage": "https://github.com/caitp/cauliflower-filter#readme",
+  "dependencies": {
+  }
+}
