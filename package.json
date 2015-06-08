@@ -30,5 +30,6 @@
   },
   "homepage": "https://github.com/caitp/cauliflower-filter#readme",
   "dependencies": {
+    "broccoli-kitchen-sink-helpers": "^0.2.7"
   }
 }
