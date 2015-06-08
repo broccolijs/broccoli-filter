@@ -34,6 +34,7 @@
     "mkdirp": "^0.3.5",
     "promise-map-series": "^0.2.1",
     "rsvp": "^3.0.18",
-    "symlink-or-copy": "^1.0.1"
+    "symlink-or-copy": "^1.0.1",
+    "walk-sync": "^0.1.3"
   }
 }
