@@ -5,7 +5,10 @@ node_js:
 
 install:
   time npm install
-  time npm install istanbul coveralls
+  time npm install -g istanbul coveralls
 
 script:
-  time node scripts/travis.js
+  time npm run coverage
+
+after_success:
+  npm run coveralls

@@ -4,7 +4,9 @@
   "description": "Broccoli-filter, implemented ontop of the rebuild api()",
   "main": "filter.js",
   "scripts": {
-    "test": "minijasminenode2 ./test.js"
+    "test": "minijasminenode2 ./test.js",
+    "coverage": "istanbul --config=scripts/istanbul.yml cover minijasminenode2 ./test.js"
+    "coveralls": "cat ./coverage/lcov.info | coveralls"
   },
   "repository": {
     "type": "git",
