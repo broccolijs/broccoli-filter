@@ -39,5 +39,9 @@ spawn(bin('istanbul'), [
   readable.pipe(proc.stdin);
   proc.on('exit', function(code) {
     process.exit(0);
+  }).on('error', function(err) {
+    throw err;
   });
+}).on('error', function(err) {
+  throw err;
 });
