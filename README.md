@@ -57,6 +57,8 @@ class Filter {
 
 ```js
 'use strict';
+var Filter = require('cauliflower-filter');
+
 function Awk(inputTree, search, replace) {
   Filter.call(this, inputTree);
   this.search = search;
