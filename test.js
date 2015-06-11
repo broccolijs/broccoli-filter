@@ -1,7 +1,6 @@
 'use strict';
 
 var inherits = require('util').inherits;
-var rewire = require('rewire');
 var mockfs = require('mock-fs');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
