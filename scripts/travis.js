@@ -40,8 +40,10 @@ spawn(bin('istanbul'), [
   proc.on('exit', function(code) {
     process.exit(0);
   }).on('error', function(err) {
+    err.message += ' in ' + bin('minijasminenode2');
     throw err;
   });
 }).on('error', function(err) {
+  err.message += ' in ' + bin('istanbul');
   throw err;
 });
