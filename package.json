@@ -42,6 +42,7 @@
     "minijasminenode2": "^1.0.0",
     "minimatch": "^2.0.8",
     "mocha": "^2.2.5",
-    "mock-fs": "^2.7.0"
+    "mock-fs": "^2.7.0",
+    "rewire": "^2.3.4"
   }
 }
