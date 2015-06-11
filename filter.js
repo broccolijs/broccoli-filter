@@ -21,11 +21,17 @@ function Filter(inputTree, options) {
   this.inputTree = inputTree;
 
   /* Destruecturing assignment in node 0.12.2 would be really handy for this! */
-  options = options || {};
-  this.extensions = options.extensions;
-  this.targetExtension = options.targetExtension;
-  this.inputEncoding = options.inputEncoding;
-  this.outputEnoding = options.outputEncoding;
+  if (options) {
+    if (options.extensions != null)
+        this.extensions = options.extensions;
+    if (options.targetExtension != null)
+        this.targetExtension = options.targetExtension;
+    if (options.inputEncoding != null)
+        this.inputEncoding = options.inputEncoding;
+    if (options.outputEncoding != null)
+        this.outputEncoding = options.outputEncoding;
+  }
+
   this._cache = Object.create(null);
   this._canProcessCache = Object.create(null);
   this._destFilePathCache = Object.create(null);

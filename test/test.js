@@ -229,4 +229,27 @@ describe('Filter', function() {
       expect(awk.canProcessFile.callCount).to.equal(3);
     });
   });
+
+
+  it('should not overwrite core options if they are not present', function() {
+    function F(inputTree, options) { Filter.call(this, inputTree, options); }
+    inherits(F, Filter);
+    F.prototype.extensions = ['js', 'rs'];
+    F.prototype.targetExtension = 'glob';
+    F.prototype.inputEncoding = 'latin1';
+    F.prototype.outputEncoding = 'shift-jis';
+    expect(new F('.').extensions).to.eql(['js', 'rs']);
+    expect(new F('.').targetExtension).to.equal('glob');
+    expect(new F('.').inputEncoding).to.equal('latin1');
+    expect(new F('.').outputEncoding).to.equal('shift-jis');
+
+    expect(new F('.', { extensions: ['x'] }).extensions).
+        to.eql(['x']);
+    expect(new F('.', { targetExtension: 'c' }).targetExtension).
+        to.equal('c');
+    expect(new F('.', { inputEncoding: 'utf8'} ).inputEncoding).
+        to.equal('utf8');
+    expect(new F('.', { outputEncoding: 'utf8' }).outputEncoding).
+        to.equal('utf8');
+  });
 });
