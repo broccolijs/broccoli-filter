@@ -58,14 +58,6 @@ Filter.prototype.rebuild = function() {
   });
 };
 
-function internalCanProcessFile(self, relativePath) {
-  var cache = self._canProcessCache;
-  var entry = cache[relativePath];
-  if (entry !== void 0) return entry;
-  cache[relativePath] = entry = !!self.canProcessFile(relativePath);
-  return entry;
-};
-
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
   if (!this.extensions || !this.extensions.length) return false;
@@ -76,18 +68,6 @@ Filter.prototype.canProcessFile =
     }
   }
   return false;
-};
-
-function internalGetDestFilePath(self, relativePath) {
-  var cache = self._destFilePathCache;
-  var entry = cache[relativePath];
-  if (entry !== void 0) return entry;
-  entry = self.getDestFilePath(relativePath);
-
-  // TODO(@caitp): Is it even worth normalizing this?
-  if (entry !== null && typeof entry !== 'string') entry = null;
-
-  return cache[relativePath] = entry;
 };
 
 Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
@@ -199,3 +179,28 @@ Filter.prototype.processString =
       'When subclassing cauliflower-filter you must implement the ' +
       '`processString()` method.');
 };
+
+function memoize(func, cacheName) {
+  if (typeof func !== 'function') throw new TypeError('Expected a function');
+  function memoized(self, key) {
+    var cache = self[cacheName] || (self[cacheName] = Object.create(null));
+    var entry = cache[key];
+    if (entry !== void 0) return entry;
+
+    var args = [];
+    for (var i = 1, ii = arguments.length; i < ii; ++i) args.push(arguments[i]);
+    return cache[key] = func.apply(self, args);
+  }
+  return memoized;
+}
+
+var internalCanProcessFile = memoize(function canProcessFile(relativePath) {
+  return !!this.canProcessFile(relativePath);
+}, '_canProcessCache');
+
+var internalGetDestFilePath = memoize(function getDestFilePath(relativePath) {
+  var entry = this.getDestFilePath(relativePath);
+  // TODO(@caitp): Is it even worth normalizing this?
+  if (entry !== null && typeof entry !== 'string') entry = null;
+  return entry;
+}, '_destFilePathCache');
