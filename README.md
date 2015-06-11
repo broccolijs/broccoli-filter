@@ -5,8 +5,7 @@ cauliflower-filter
 new rebuild() api, ensuring stable outputs across builds. Also offers test
 coverage to ensure that this plugin behaves as expected.
 
-API
-###
+##API
 
 ```js
 class Filter {
