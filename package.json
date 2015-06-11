@@ -4,7 +4,8 @@
   "description": "Broccoli-filter, implemented ontop of the rebuild api()",
   "main": "filter.js",
   "scripts": {
-    "test": "minijasminenode2 ./test.js"
+    "test": "mocha",
+    "test:watch": "mocha --watch"
   },
   "repository": {
     "type": "git",
