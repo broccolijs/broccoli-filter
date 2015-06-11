@@ -1,8 +1,6 @@
 instrumentation:
   extensions:
     - .js
-  excludes:
-    - test.js
 reporting:
   print: 'none'
   reports:

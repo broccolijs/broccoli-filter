@@ -4,11 +4,11 @@ node_js:
   - '0.12'
 
 install:
-  time npm install
-  time npm install istanbul coveralls
+  - time npm install
+  - time npm install istanbul coveralls
 
 script:
-  time npm run coverage
+  - ./node_modules/.bin/istanbul cover --config="scripts/istanbul.yml" ./node_modules/.bin/minijasminenode2 ./test.js
 
 after_success:
-  npm run coveralls
+  - cat ./coverage/lcov.info | ./node_modules/.bin/coveralls
