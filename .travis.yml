@@ -8,7 +8,7 @@ install:
   - time npm install istanbul coveralls
 
 script:
-  - ./node_modules/.bin/istanbul cover --config="scripts/istanbul.yml" ./node_modules/.bin/minijasminenode2 ./test.js
+  - ./node_modules/.bin/istanbul cover --config="test/istanbul.yml" ./node_modules/.bin/_mocha
 
 after_success:
   - cat ./coverage/lcov.info | ./node_modules/.bin/coveralls

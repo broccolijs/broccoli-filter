@@ -13,7 +13,7 @@ var fs = require('fs');
 var mkdirp = require('mkdirp');
 var path = require('path');
 var Builder = require('broccoli').Builder;
-var Filter = require('./filter.js');
+var Filter = require('../filter.js');
 var minimatch = require('minimatch');
 
 function ReplaceFilter(inputTree, options) {

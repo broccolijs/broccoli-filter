@@ -1,8 +1,9 @@
 instrumentation:
+  root: .
   extensions:
     - .js
   excludes:
-    - test.js
+    - test/test.js
 reporting:
   print: 'none'
   reports:
