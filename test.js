@@ -168,6 +168,8 @@ describe('Filter', function() {
       replace: 'cats'
     });
 
+    spyOn(awk, 'processString').and.callThrough();
+
     builder = new Builder(awk);
 
     step(true, function() {
@@ -175,6 +177,7 @@ describe('Filter', function() {
           toBe('Nicest cats in need of homes');
       expect(read(awk.outputPath + '/a/foo.js')).
           toBe('Nicest dogs in need of homes');
+      expect(awk.processString.calls.count()).toBe(1);
     });
 
     run(done);
