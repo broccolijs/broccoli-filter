@@ -33,6 +33,13 @@ ReplaceFilter.prototype.processString = function(contents, relativePath) {
   return result;
 };
 
+function IncompleteFilter(inputTree, options) {
+  if (!this) return new IncompleteFilter(inputTree, options);
+  Filter.call(this, inputTree, options);
+}
+
+inherits(IncompleteFilter, Filter);
+
 describe('Filter', function() {
   var builder;
   var steps;
@@ -151,6 +158,46 @@ describe('Filter', function() {
       return new Filter();
     }).toThrowError(
         TypeError, 'Filter is an abstract class and must be sub-classed');
+  });
+
+
+  it('should throw if `processString` is not implemented', function() {
+    expect(function() {
+      new IncompleteFilter('.').processString('foo', 'fake_path');
+    }).toThrowError(Error);
+  });
+
+
+  it('should process files with extensions included in `extensions` list by ' +
+     'default', function() {
+    function MyFilter(inputTree, options) {
+      if (!this) return new MyFilter(inputTree, options);
+      Filter.call(this, inputTree, options);
+    }
+    inherits(MyFilter, Filter);
+    var filter = MyFilter('.', { extensions: ['c', 'cc', 'js']});
+    expect(filter.canProcessFile('foo.c')).toBe(true);
+    expect(filter.canProcessFile('test.js')).toBe(true);
+    expect(filter.canProcessFile('blob.cc')).toBe(true);
+    expect(filter.canProcessFile('twerp.rs')).toBe(false);
+  });
+
+
+  it('should replace matched extension with targetExtension by default',
+      function() {
+    function MyFilter(inputTree, options) {
+      if (!this) return new MyFilter(inputTree, options);
+      Filter.call(this, inputTree, options);
+    }
+    inherits(MyFilter, Filter);
+    var filter = MyFilter('.', {
+      extensions: ['c', 'cc', 'js'],
+      targetExtension: 'zebra'
+    });
+    expect(filter.getDestFilePath('foo.c')).toBe('foo.zebra');
+    expect(filter.getDestFilePath('test.js')).toBe('test.zebra');
+    expect(filter.getDestFilePath('blob.cc')).toBe('blob.zebra');
+    expect(filter.getDestFilePath('twerp.rs')).toBe('twerp.rs');
   });
 
 

@@ -62,7 +62,14 @@ function internalCanProcessFile(self, relativePath) {
 
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
-  return internalGetDestFilePath(this, relativePath) !== null;
+  if (!this.extensions || !this.extensions.length) return false;
+  for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
+    var ext = this.extensions[i];
+    if (relativePath.slice(-ext.length - 1) === '.' + ext) {
+      return true;
+    }
+  }
+  return false;
 };
 
 function internalGetDestFilePath(self, relativePath) {
