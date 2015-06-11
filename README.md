@@ -2,6 +2,7 @@ cauliflower-filter
 ==================
 
 [![Build Status](https://travis-ci.org/caitp/cauliflower-filter.svg?branch=master)](https://travis-ci.org/caitp/cauliflower-filter)
+[![Coverage Status](https://img.shields.io/coveralls/caitp/cauliflower-filter.svg)](https://coveralls.io/r/caitp/cauliflower-filter?branch=master)
 [![NPM Version](http://img.shields.io/npm/v/cauliflower-filter.svg)](https://www.npmjs.org/package/cauliflower-filter)
 
 [broccoli-filter](https://github.com/broccolijs/broccoli-filter) built on the
