@@ -1,5 +1,6 @@
 'use strict';
 
+var Promise = require('rsvp').Promise;
 var inherits = require('util').inherits;
 var mockfs = require('mock-fs');
 var fs = require('fs');
