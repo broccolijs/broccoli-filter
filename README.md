@@ -10,6 +10,14 @@ cauliflower-filter
 new rebuild() api, ensuring stable outputs across builds. Also offers test
 coverage to ensure that this plugin behaves as expected.
 
+Cauliflower-filter aims to be 100% API compatible and suitable as a drop-in
+replacement of broccoli-filter.
+
+Key Differences                   | cauliflower-filter | broccoli-filter
+--------------------------------- | ------------------ | ---------------
+Output path stable across builds  | ✓                  | ✘
+Test coverage                     | ✓                  | ✘
+
 ##API
 
 ```js
