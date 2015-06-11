@@ -9,6 +9,7 @@ var helpers = require('broccoli-kitchen-sink-helpers');
 var walkSync = require('walk-sync');
 var mapSeries = require('promise-map-series');
 var symlinkOrCopySync = require('symlink-or-copy').sync;
+var copyDereferenceSync = require('copy-dereference').sync;
 
 module.exports = Filter;
 
@@ -17,6 +18,7 @@ function Filter(inputTree, options) {
       Object.getPrototypeOf(this) === Filter.prototype) {
     throw new TypeError('Filter is an abstract class and must be sub-classed');
   }
+  this.inputTree = inputTree;
 
   /* Destruecturing assignment in node 0.12.2 would be really handy for this! */
   options = options || {};
@@ -38,11 +40,10 @@ Filter.prototype.rebuild = function() {
   return mapSeries(paths, function rebuildEntry(relativePath) {
     var destPath = destDir + '/' + relativePath;
     if (relativePath.slice(-1) === '/') {
-      console.log('Filter#rebuild creating "' + destPath + '"');
       mkdirp.sync(destPath);
     } else {
-      if (this._canProcessFile(relativePath)) {
-        return this.processAndCacheFile(srcDir, destDir, relativePath);
+      if (internalCanProcessFile(self, relativePath)) {
+        return self.processAndCacheFile(srcDir, destDir, relativePath);
       } else {
         var srcPath = srcDir + '/' + relativePath;
         symlinkOrCopySync(srcPath, destPath);
@@ -51,24 +52,24 @@ Filter.prototype.rebuild = function() {
   });
 };
 
-Filter.prototype._canProcessFile =
-    function internalCanProcessFile(relativePath) {
-  var cache = this._canProcessCache;
+function internalCanProcessFile(self, relativePath) {
+  var cache = self._canProcessCache;
   var entry = cache[relativePath];
   if (entry !== void 0) return entry;
-  return cache[relativePath] = !!this.canProcessFile(relativePath);
+  cache[relativePath] = entry = !!self.canProcessFile(relativePath);
+  return entry;
 };
 
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
-  return this._getDestFilePath(relativePath) !== null;
+  return internalGetDestFilePath(this, relativePath) !== null;
 };
 
-Filter.prototype._getDestFilePath = function internalGetDestFilePath(relativePath) {
-  var cache = this._destFilePathCache;
+function internalGetDestFilePath(self, relativePath) {
+  var cache = self._destFilePathCache;
   var entry = cache[relativePath];
   if (entry !== void 0) return entry;
-  entry = this.getDestFilePath(relativePath);
+  entry = self.getDestFilePath(relativePath);
 
   // TODO(@caitp): Is it even worth normalizing this?
   if (entry !== null && typeof entry !== 'string') entry = null;
@@ -77,8 +78,7 @@ Filter.prototype._getDestFilePath = function internalGetDestFilePath(relativePat
 };
 
 Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
-  /* Just symlink if this file isn't intended to be processed */
-  if (!this.extensions) return null;
+  if (!this.extensions) return relativePath;
 
   for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
     var ext = this.extensions[i];
@@ -90,13 +90,12 @@ Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
       return relativePath;
     }
   }
-  return null;
+  return relativePath;
 }
 
 Filter.prototype.processAndCacheFile =
     function processAndCacheFile(srcDir, destDir, relativePath) {
   var self = this;
-
   var cacheEntry = this._cache[relativePath];
 
   if (cacheEntry !== void 0 &&
@@ -139,21 +138,23 @@ Filter.prototype.processAndCacheFile =
     cacheInfo = cacheInfo || {};
     var inputFiles = cacheInfo.inputFiles || [relativePath];
     var outputFiles =
-        cacheInfo.outputFiles || [self._getDestFilePath(relativePath)];
+        cacheInfo.outputFiles || [internalGetDestFilePath(self, relativePath)];
     var cacheFiles = [];
     for (var i = 0, ii = outputFiles.length; i < ii; ++i) {
       var cacheFile = '' + (self._cacheIndex++);
       cacheFiles.push(cacheFile);
 
-      helpers.copyPreserveSync(
-          destDir + '/' + outputFiles[i], self.cachePath + '/' + cacheFile);
+      var outputPath = destDir + '/' + outputFiles[i];
+      var cachePath = self.cachePath + '/' + cacheFile;
+      copyDereferenceSync(outputPath, cachePath);
     }
-    return self._cache[relativePath] = {
+    var result = self._cache[relativePath] = {
       hash: hash(inputFiles),
       inputFiles: inputFiles,
       outputFiles: outputFiles,
       cacheFiles: cacheFiles
     };
+    return result;
   }
 };
 
@@ -168,7 +169,8 @@ Filter.prototype.processFile =
       srcDir + '/' + relativePath, { encoding: inputEncoding });
   return Promise.resolve(this.processString(contents, relativePath)).
       then(function asyncOutputFilteredFile(outputString) {
-        var outputPath = self._getDestFilePath(relativePath);
+        var outputPath = internalGetDestFilePath(self, relativePath);
+        mkdirp.sync(path.dirname(outputPath));
         fs.writeFileSync(
             destDir + '/' + outputPath, outputString,
             { encoding: outputEncoding });

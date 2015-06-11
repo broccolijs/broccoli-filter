@@ -1,27 +1,122 @@
 'use strict';
 
 var inherits = require('util').inherits;
+var rewire = require('rewire');
 var mockfs = require('mock-fs');
 var fs = require('fs');
+var mkdirp = require('mkdirp');
+var path = require('path');
 var Builder = require('broccoli').Builder;
 var Filter = require('./filter.js');
+var minimatch = require('minimatch');
+
+function ReplaceFilter(inputTree, options) {
+  if (!this) return new ReplaceFilter(inputTree, options);
+  options = options || {};
+  Filter.call(this, inputTree, options);
+  this._glob = options.glob;
+  this._search = options.search;
+  this._replacement = options.replace;
+}
+
+inherits(ReplaceFilter, Filter);
+
+ReplaceFilter.prototype.canProcessFile = function(relativePath) {
+  if (this._glob === void 0) {
+    return Filter.prototype.canProcessFile.call(this, relativePath);
+  }
+  return minimatch(relativePath, this._glob);
+};
+
+ReplaceFilter.prototype.processString = function(contents, relativePath) {
+  var result = contents.replace(this._search, this._replacement);
+  return result;
+};
 
 describe('Filter', function() {
   var builder;
+  var steps;
+  var createdTmpDir = false;
+
+  function mockFS(config) {
+    var result = mockfs(config);
+    fs.mkdirSync('tmp');
+    return result;
+  }
 
   beforeEach(function() {
     builder = void 0;
+    createdTmpDir = false;
+    steps = [];
+    jasmine.addMatchers({
+      toFail: function() {
+        return {
+          negativeCompare: function(err) {
+            return {
+              pass: !err,
+              message: ('stack' in err) ? err.stack : err
+            };
+          }
+        };
+      }
+    });
+
   });
 
   afterEach(function(done) {
-    done();
+    mockfs.restore();
+    expect(steps.length).toBe(0);
     if (builder === void 0) return done();
-    //builder.cleanup().then(done, done);
+    builder.cleanup().then(done, function(err) {
+      expect(err).not.toFail();
+      done();
+    });
   });
+
+  function step(build, fn) {
+    if (arguments.length === 1) {
+      fn = build;
+      build = false;
+    }
+    steps.push({
+      fn: fn,
+      build: build
+    });
+  }
+
+  function run(done) {
+    steps.reduce(function(p, step) {
+      if (step.build) {
+        // Steps requiring a build
+        return p.then(function() {
+          return builder.build();
+        }).then(step.fn, fail).catch(fail);
+      } else {
+        // Steps not requiring a build
+        return p.then(step.fn).catch(fail);
+      }
+      function fail(err) {
+        expect(err).not.toFail();
+        done();
+      }
+    }, Promise.resolve()).then(done, function(err) {
+      expect(err).not.toFail();
+      done();
+    });
+    steps = [];
+  }
 
   function read(relativePath, encoding) {
     encoding = encoding === void 0 ? 'utf8' : encoding;
     return fs.readFileSync(relativePath, encoding);
+  }
+
+  function write(relativePath, contents, encoding) {
+    encoding = encoding === void 0 ? 'utf8' : encoding;
+    mkdirp.sync(path.dirname(relativePath));
+    fs.writeFileSync(relativePath, contents, {
+      encoding: encoding
+    });
   }
 
   it('should throw if called as a function', function() {
@@ -59,69 +154,45 @@ describe('Filter', function() {
   });
 
 
-  function ReplaceFilter(inputTree, options) {
-    if (!this) return new ReplaceFilter(inputTree, options);
-    options = options || {};
-    Filter.call(this, options);
-    this._glob = options.glob;
-    this._search = options.search;
-    this._replacement = options.replace;
-  }
-
-  ReplaceFilter.prototype.canProcessFile = function(relativePath) {
-    if (this._glob === void 0) {
-      return Filter.prototype.canProcessFile.call(this, relativePath);
-    }
-    return minimatch(relativePath, this._glob);
-  };
-
-  ReplaceFilter.prototype.processString = function(contents, relativePath) {
-    return contents.replace(this._search, this._replacement)
-  };
-
-  inherits(ReplaceFilter, Filter);
-
-
   it('should processString only when canProcessFile returns true',
       function(done) {
     var disk = {
-      'dir/README.md': mockfs.file({contents: 'Nicest dogs in need of homes',
-                                    mtime: new Date(1000)}),
-      'dir/foo.js': mockfs.file({contents: 'Nicest dogs in need of homes',
-                                 mtime: new Date(1000)})
+      'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
+                                      mtime: new Date(1000)}),
+      'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
+                                   mtime: new Date(1000)})
     };
-    mockfs(disk);
-    var awk = ReplaceFilter('.', {
-      glob: '*.md',
+    mockFS(disk);
+    var awk = ReplaceFilter('dir', {
+      glob: '**/*.md',
       search: 'dogs',
       replace: 'cats'
     });
 
     builder = new Builder(awk);
 
-    builder.
-        build().
-        then(function() {
-      expect(read(tree.outputPath + '/dir/README.md')).
+    step(true, function() {
+      expect(read(awk.outputPath + '/a/README.md')).
           toBe('Nicest cats in need of homes');
-      expect(read(tree.outputPath + '/dir/foo.js')).
+      expect(read(awk.outputPath + '/a/foo.js')).
           toBe('Nicest dogs in need of homes');
-      done();
-    }, done);
+    });
+
+    run(done);
   });
 
 
   it('should cache status of canProcessFile', function(done) {
     var disk = {
-      'dir/README.md': mockfs.file({contents: 'Nicest dogs in need of homes',
-                                    mtime: new Date(1000)}),
-      'dir/foo.js': mockfs.file({contents: 'Nicest dogs in need of homes',
-                                 mtime: new Date(1000)})
+      'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
+                                      mtime: new Date(1000)}),
+      'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
+                                   mtime: new Date(1000)})
     };
-    mockfs(disk);
+    mockFS(disk);
 
-    var awk = ReplaceFilter('.', {
-      glob: '*.md',
+    var awk = ReplaceFilter('dir', {
+      glob: '**/*.md',
       search: 'dogs',
       replace: 'cats'
     });
@@ -129,35 +200,31 @@ describe('Filter', function() {
 
     builder = new Builder(awk);
 
-    builder.build().then(round1, done);
-
-    function round1() {
-      expect(read(tree.outputPath + '/dir/README.md')).
+    step(true, function() {
+      expect(read(awk.outputPath + '/a/README.md')).
           toBe('Nicest cats in need of homes');
-      expect(read(tree.outputPath + '/dir/foo.js')).
+      expect(read(awk.outputPath + '/a/foo.js')).
           toBe('Nicest dogs in need of homes');
+
       expect(awk.canProcessFile.calls.count()).toBe(2);
-      disk['dir/CONTRIBUTING.md'] = mockfs.file({
-          contents: 'All dogs go to heaven!', mtime: new Date(1000)});
-      mockfs(disk);
-      builder.build().then(round2, done);
-    }
 
-    function round2() {
-      expect(read(tree.outputPath + '/dir/README.md')).
+      write('dir/a/CONTRIBUTING.md', 'All dogs go to heaven!');
+    });
+
+    step(true, function() {
+      expect(read(awk.outputPath + '/a/README.md')).
           toBe('Nicest cats in need of homes');
-      expect(read(tree.outputPath + '/dir/foo.js')).
+      expect(read(awk.outputPath + '/a/foo.js')).
           toBe('Nicest dogs in need of homes');
-      expect(read(tree.outputPath + '/dir/CONTRIBUTING.md')).
+      expect(read(awk.outputPath + '/a/CONTRIBUTING.md')).
           toBe('All cats go to heaven!');
       expect(awk.canProcessFile.calls.count()).toBe(3);
-      mockfs(disk);
-      builder.build().then(round3, done);
-    }
+    });
 
-    function round3() {
+    step(true, function() {
       expect(awk.canProcessFile.calls.count()).toBe(3);
-      done();
-    }
+    });
+
+    run(done);
   });
 });
