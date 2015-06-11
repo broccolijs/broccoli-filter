@@ -1,4 +1,2 @@
-/node_modules
-.editorconfig
-.npmignore
-test.js
+*
+!filter.js
