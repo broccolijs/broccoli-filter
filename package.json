@@ -31,6 +31,7 @@
   "homepage": "https://github.com/caitp/cauliflower-filter#readme",
   "dependencies": {
     "broccoli-kitchen-sink-helpers": "^0.2.7",
+    "copy-dereference": "^1.0.0",
     "mkdirp": "^0.3.5",
     "promise-map-series": "^0.2.1",
     "rsvp": "^3.0.18",
