@@ -10,11 +10,11 @@ var NODE_MODULES = path.join(ROOT_DIR, 'node_modules');
 var BIN_DIR = path.join(NODE_MODULES, '.bin');
 
 function bin(name) {
-  return path.join(BIN_DIR, name);
+  return path.relative(SCRIPTS_DIR, path.join(BIN_DIR, name));
 }
 
 function f(p) {
-  return path.join(ROOT_DIR, p);
+  return path.relative(SCRIPTS_DIR, path.join(ROOT_DIR, p));
 }
 
 function o(opt, val) {
