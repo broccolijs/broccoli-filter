@@ -31,6 +31,7 @@
     "broccoli-kitchen-sink-helpers": "^0.2.7",
     "copy-dereference": "^1.0.0",
     "mkdirp": "^0.5.1",
+    "mocha": "^2.2.5",
     "promise-map-series": "^0.2.1",
     "rsvp": "^3.0.18",
     "symlink-or-copy": "^1.0.1",
