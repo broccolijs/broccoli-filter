@@ -5,3 +5,7 @@ node_js:
 
 install:
   time npm install
+  time npm install istanbul coveralls
+
+script:
+  time node scripts/travis.js

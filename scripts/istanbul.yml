@@ -1,0 +1,9 @@
+instrumentation:
+  root: .
+  extensions:
+    - .js
+  excludes: [test.js]
+reporting:
+  print: 'none'
+  reports:
+    - lcov
