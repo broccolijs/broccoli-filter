@@ -52,3 +52,48 @@ class Filter {
   abstract processString(contents: string, relativePath: string): string;
 }
 ```
+
+### Example use:
+
+```js
+'use strict';
+function Awk(inputTree, search, replace) {
+  Filter.call(this, inputTree);
+  this.search = search;
+  this.replace = replace;
+}
+
+Awk.prototype = Object.create(Filter.prototype, {
+  constructor: {
+    enumerable: false,
+    configurable: true,
+    writable: false,
+    value: Awk
+  }
+});
+
+Awk.prototype.canProcessFile = function(relativePath) {
+  return true;
+};
+
+Awk.prototype.getDestFilePath = function(relativePath) {
+  return relativePath;
+};
+
+Awk.prototype.processString = function(content, relativePath) {
+  return content.replace(this.search, this.replace);
+};
+
+var funnel = new Funnel('', {
+  files: [
+    'foo.txt',
+    'bar.txt',
+    'baz.txt'
+  ]
+});
+var tree = new Awk(funnel, 'ES6', 'ECMAScript 2015');
+
+var builder = new require('broccoli').Builder(tree);
+builder.build();
+
+```
