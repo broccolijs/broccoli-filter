@@ -18,7 +18,7 @@ Key Differences                   | cauliflower-filter | broccoli-filter
 Output path stable across builds  | ✓                  | ✘
 Test coverage                     | ✓                  | ✘
 
-##API
+## API
 
 ```js
 class Filter {
