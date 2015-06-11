@@ -2,6 +2,7 @@ cauliflower-filter
 ==================
 
 [![Build Status](https://travis-ci.org/caitp/cauliflower-filter.svg?branch=master)](https://travis-ci.org/caitp/cauliflower-filter)
+[![NPM Version](http://img.shields.io/npm/v/cauliflower-filter.svg)](https://www.npmjs.org/package/cauliflower-filter)
 
 [broccoli-filter](https://github.com/broccolijs/broccoli-filter) built on the
 new rebuild() api, ensuring stable outputs across builds. Also offers test
