@@ -118,6 +118,9 @@ Filter.prototype.processAndCacheFile =
       function asyncCopyToCache(cacheInfo) {
         copyToCache(cacheInfo);
       },
+      // TODO(@caitp): error wrapper is for API compat, but is not particularly
+      // useful.
+      // istanbul ignore next
       function asyncProcessFileErrorWrapper(e) {
         if (typeof e !== 'object') e = new Error('' + e);
         e.file = relativePath;
