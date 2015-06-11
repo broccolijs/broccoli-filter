@@ -1,8 +1,14 @@
 'use strict';
 
-var Promise = require('rsvp').Promise;
+var chai = require('chai');
+var expect = chai.expect;
+var sinon = require('sinon');
+var broccoliTestHelpers = require('broccoli-test-helpers');
+var makeTestHelper = broccoliTestHelpers.makeTestHelper;
+var cleanupBuilders = broccoliTestHelpers.cleanupBuilders;
+
 var inherits = require('util').inherits;
-var mockfs = require('mock-fs');
+var _mockfs = require('mock-fs');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var path = require('path');
@@ -41,77 +47,30 @@ function IncompleteFilter(inputTree, options) {
 inherits(IncompleteFilter, Filter);
 
 describe('Filter', function() {
-  var builder;
   var steps;
   var createdTmpDir = false;
 
-  function mockFS(config) {
-    var result = mockfs(config);
-    fs.mkdirSync('tmp');
-    return result;
+  function mockfs(config) {
+    config.tmp = _mockfs.directory();
+    return _mockfs(config);
+  }
+  mockfs.file = _mockfs.file;
+  mockfs.directory = _mockfs.directory;
+  mockfs.symlink = _mockfs.symlink;
+  mockfs.restore = function() { return _mockfs.restore(); }
+
+  function makeBuilder(plugin, dir, prepSubject) {
+    return makeTestHelper({
+      subject: plugin,
+      fixturePath: dir,
+      prepSubject: prepSubject
+    });
   }
 
-  beforeEach(function() {
-    builder = void 0;
-    createdTmpDir = false;
-    steps = [];
-    jasmine.addMatchers({
-      toFail: function() {
-        return {
-          negativeCompare: function(err) {
-            return {
-              pass: !err,
-              message: ('stack' in err) ? err.stack : err
-            };
-          }
-        };
-      }
-    });
-
-  });
-
-  afterEach(function(done) {
+  afterEach(function() {
+    cleanupBuilders();
     mockfs.restore();
-    expect(steps.length).toBe(0);
-    if (builder === void 0) return done();
-    builder.cleanup().then(done, function(err) {
-      expect(err).not.toFail();
-      done();
-    });
   });
-
-  function step(build, fn) {
-    if (arguments.length === 1) {
-      fn = build;
-      build = false;
-    }
-    steps.push({
-      fn: fn,
-      build: build
-    });
-  }
-
-  function run(done) {
-    steps.reduce(function(p, step) {
-      if (step.build) {
-        // Steps requiring a build
-        return p.then(function() {
-          return builder.build();
-        }).then(step.fn, fail).catch(fail);
-      } else {
-        // Steps not requiring a build
-        return p.then(step.fn).catch(fail);
-      }
-      function fail(err) {
-        expect(err).not.toFail();
-        done();
-      }
-    }, Promise.resolve()).then(done, function(err) {
-      expect(err).not.toFail();
-      done();
-    });
-    steps = [];
-  }
 
   function read(relativePath, encoding) {
     encoding = encoding === void 0 ? 'utf8' : encoding;
@@ -129,8 +88,7 @@ describe('Filter', function() {
   it('should throw if called as a function', function() {
     expect(function() {
       return Filter();
-    }).toThrowError(
-        TypeError, 'Filter is an abstract class and must be sub-classed');
+    }).to.throw(TypeError, /abstract class and must be sub-classed/);
   });
 
 
@@ -138,33 +96,29 @@ describe('Filter', function() {
       function() {
     expect(function() {
       return Filter.call({});
-    }).toThrowError(
-        TypeError, 'Filter is an abstract class and must be sub-classed');
+    }).to.throw(TypeError, /abstract class and must be sub-classed/);
 
     expect(function() {
       return Filter.call([]);
-    }).toThrowError(
-        TypeError, 'Filter is an abstract class and must be sub-classed');
+    }).to.throw(TypeError, /abstract class and must be sub-classed/);
 
     expect(function() {
       return Filter.call(global);
-    }).toThrowError(
-        TypeError, 'Filter is an abstract class and must be sub-classed');
+    }).to.throw(TypeError, /abstract class and must be sub-classed/);
   });
 
 
   it('should throw if base Filter class is new-ed', function() {
     expect(function() {
       return new Filter();
-    }).toThrowError(
-        TypeError, 'Filter is an abstract class and must be sub-classed');
+    }).to.throw(TypeError, /abstract class and must be sub-classed/);
   });
 
 
   it('should throw if `processString` is not implemented', function() {
     expect(function() {
       new IncompleteFilter('.').processString('foo', 'fake_path');
-    }).toThrowError(Error);
+    }).to.throw(Error, /must implement/);
   });
 
 
@@ -176,10 +130,10 @@ describe('Filter', function() {
     }
     inherits(MyFilter, Filter);
     var filter = MyFilter('.', { extensions: ['c', 'cc', 'js']});
-    expect(filter.canProcessFile('foo.c')).toBe(true);
-    expect(filter.canProcessFile('test.js')).toBe(true);
-    expect(filter.canProcessFile('blob.cc')).toBe(true);
-    expect(filter.canProcessFile('twerp.rs')).toBe(false);
+    expect(filter.canProcessFile('foo.c')).to.equal(true);
+    expect(filter.canProcessFile('test.js')).to.equal(true);
+    expect(filter.canProcessFile('blob.cc')).to.equal(true);
+    expect(filter.canProcessFile('twerp.rs')).to.equal(false);
   });
 
 
@@ -194,87 +148,85 @@ describe('Filter', function() {
       extensions: ['c', 'cc', 'js'],
       targetExtension: 'zebra'
     });
-    expect(filter.getDestFilePath('foo.c')).toBe('foo.zebra');
-    expect(filter.getDestFilePath('test.js')).toBe('test.zebra');
-    expect(filter.getDestFilePath('blob.cc')).toBe('blob.zebra');
-    expect(filter.getDestFilePath('twerp.rs')).toBe('twerp.rs');
+    expect(filter.getDestFilePath('foo.c')).to.equal('foo.zebra');
+    expect(filter.getDestFilePath('test.js')).to.equal('test.zebra');
+    expect(filter.getDestFilePath('blob.cc')).to.equal('blob.zebra');
+    expect(filter.getDestFilePath('twerp.rs')).to.equal('twerp.rs');
   });
 
 
   it('should processString only when canProcessFile returns true',
-      function(done) {
+      function() {
     var disk = {
       'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
                                       mtime: new Date(1000)}),
       'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
                                    mtime: new Date(1000)})
     };
-    mockFS(disk);
-    var awk = ReplaceFilter('dir', {
+    mockfs(disk);
+    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+      sinon.spy(awk, 'processString');
+      return awk;
+    });
+    return builder('dir', {
       glob: '**/*.md',
       search: 'dogs',
       replace: 'cats'
-    });
-
-    spyOn(awk, 'processString').and.callThrough();
-
-    builder = new Builder(awk);
-
-    step(true, function() {
+    }).then(function(results) {
+      var awk = results.subject;
       expect(read(awk.outputPath + '/a/README.md')).
-          toBe('Nicest cats in need of homes');
+          to.equal('Nicest cats in need of homes');
       expect(read(awk.outputPath + '/a/foo.js')).
-          toBe('Nicest dogs in need of homes');
-      expect(awk.processString.calls.count()).toBe(1);
+          to.equal('Nicest dogs in need of homes');
+      expect(awk.processString.callCount).to.equal(1);
     });
-
-    run(done);
   });
 
 
-  it('should cache status of canProcessFile', function(done) {
+  it('should cache status of canProcessFile', function() {
     var disk = {
       'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
                                       mtime: new Date(1000)}),
       'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
                                    mtime: new Date(1000)})
     };
-    mockFS(disk);
+    mockfs(disk);
+    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+      sinon.spy(awk, 'canProcessFile');
+      return awk;
+    });
 
-    var awk = ReplaceFilter('dir', {
+    return builder('dir', {
       glob: '**/*.md',
       search: 'dogs',
       replace: 'cats'
-    });
-    spyOn(awk, 'canProcessFile').and.callThrough();
+    }).then(function(results) {
+      var awk = results.subject;
 
-    builder = new Builder(awk);
-
-    step(true, function() {
       expect(read(awk.outputPath + '/a/README.md')).
-          toBe('Nicest cats in need of homes');
+          to.equal('Nicest cats in need of homes');
       expect(read(awk.outputPath + '/a/foo.js')).
-          toBe('Nicest dogs in need of homes');
+          to.equal('Nicest dogs in need of homes');
 
-      expect(awk.canProcessFile.calls.count()).toBe(2);
+      expect(awk.canProcessFile.callCount).to.equal(2);
 
       write('dir/a/CONTRIBUTING.md', 'All dogs go to heaven!');
-    });
 
-    step(true, function() {
+      return results.builder();
+    }).then(function(results) {
+      var awk = results.subject;
       expect(read(awk.outputPath + '/a/README.md')).
-          toBe('Nicest cats in need of homes');
+          to.equal('Nicest cats in need of homes');
       expect(read(awk.outputPath + '/a/foo.js')).
-          toBe('Nicest dogs in need of homes');
+          to.equal('Nicest dogs in need of homes');
       expect(read(awk.outputPath + '/a/CONTRIBUTING.md')).
-          toBe('All cats go to heaven!');
-      expect(awk.canProcessFile.calls.count()).toBe(3);
-    });
+          to.equal('All cats go to heaven!');
+      expect(awk.canProcessFile.callCount).to.equal(3);
 
-    step(true, function() {
-      expect(awk.canProcessFile.calls.count()).toBe(3);
+      return results.builder();
+    }).then(function(results) {
+      var awk = results.subject;
+      expect(awk.canProcessFile.callCount).to.equal(3);
     });
-
-    run(done);
   });
 });
