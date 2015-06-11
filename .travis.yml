@@ -5,7 +5,7 @@ node_js:
 
 install:
   time npm install
-  time npm install -g istanbul coveralls
+  time npm install istanbul coveralls
 
 script:
   time npm run coverage
