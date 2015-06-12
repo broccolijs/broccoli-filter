@@ -47,9 +47,6 @@ function IncompleteFilter(inputTree, options) {
 inherits(IncompleteFilter, Filter);
 
 describe('Filter', function() {
-  var steps;
-  var createdTmpDir = false;
-
   function mockfs(config) {
     config.tmp = _mockfs.directory();
     return _mockfs(config);
