@@ -166,10 +166,11 @@ Filter.prototype.processFile =
   return Promise.resolve(this.processString(contents, relativePath)).
       then(function asyncOutputFilteredFile(outputString) {
         var outputPath = internalGetDestFilePath(self, relativePath);
+        outputPath = destDir + '/' + outputPath;
         mkdirp.sync(path.dirname(outputPath));
-        fs.writeFileSync(
-            destDir + '/' + outputPath, outputString,
-            { encoding: outputEncoding });
+        fs.writeFileSync(outputPath, outputString, {
+          encoding: outputEncoding
+        });
       });
 };
 

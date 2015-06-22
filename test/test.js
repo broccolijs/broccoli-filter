@@ -249,4 +249,41 @@ describe('Filter', function() {
     expect(new F('.', { outputEncoding: 'utf8' }).outputEncoding).
         to.equal('utf8');
   });
+
+  describe('proccesFile', function() {
+    beforeEach(function() {
+      sinon.spy(fs, 'mkdirSync');
+    });
+
+    afterEach(function() {
+      fs.mkdirSync.restore();
+    });
+
+    it('should not effect the current cwd', function() {
+      var disk = {
+        'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
+                                        mtime: new Date(1000)}),
+        'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
+                                     mtime: new Date(1000)}),
+        'dir/a/bar/bar.js': mockfs.file({content: 'Dogs... who needs dogs?',
+                                     mtime: new Date(1000)})
+      };
+
+      mockfs(disk);
+
+      var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+        sinon.spy(awk, 'canProcessFile');
+        return awk;
+      });
+
+      return builder('dir', {
+        glob: '**/*.js',
+        search: 'dogs',
+        replace: 'cats'
+      }).then(function(results) {
+        expect(fs.mkdirSync.calledWith(path.join(process.cwd(), 'a'), 493)).to.eql(false);
+        expect(fs.mkdirSync.calledWith(path.join(process.cwd(), 'a', 'bar'), 493)).to.eql(false);
+      });
+    });
+  });
 });
