@@ -60,7 +60,7 @@ Filter.prototype.rebuild = function() {
 
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
-  if (!this.extensions || !this.extensions.length) return false;
+  if (this.extensions == null || !this.extensions.length) return false;
   for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
     var ext = this.extensions[i];
     if (relativePath.slice(-ext.length - 1) === '.' + ext) {
@@ -71,12 +71,12 @@ Filter.prototype.canProcessFile =
 };
 
 Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
-  if (!this.extensions) return relativePath;
+  if (this.extensions == null) return relativePath;
 
   for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
     var ext = this.extensions[i];
     if (relativePath.slice(-ext.length - 1) === '.' + ext) {
-      if (this.targetExtension !== 0) {
+      if (this.targetExtension != null) {
         relativePath =
             relativePath.slice(0, -ext.length) + this.targetExtension;
       }
