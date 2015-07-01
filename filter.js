@@ -10,6 +10,8 @@ var walkSync = require('walk-sync');
 var mapSeries = require('promise-map-series');
 var symlinkOrCopySync = require('symlink-or-copy').sync;
 var copyDereferenceSync = require('copy-dereference').sync;
+var rimraf = require('rimraf').sync;
+var Cache = require('./cache');
 
 module.exports = Filter;
 
@@ -32,7 +34,7 @@ function Filter(inputTree, options) {
         this.outputEncoding = options.outputEncoding;
   }
 
-  this._cache = Object.create(null);
+  this._cache = new Cache();
   this._canProcessCache = Object.create(null);
   this._destFilePathCache = Object.create(null);
   this._cacheIndex = 0;
@@ -43,6 +45,11 @@ Filter.prototype.rebuild = function() {
   var srcDir = this.inputPath;
   var destDir = this.outputPath;
   var paths = walkSync(srcDir);
+
+  this._cache.deleteExcept(paths).forEach(function(relativePath) {
+    rimraf(path.join(destDir, relativePath));
+  });
+
   return mapSeries(paths, function rebuildEntry(relativePath) {
     var destPath = destDir + '/' + relativePath;
     if (relativePath.slice(-1) === '/') {
@@ -89,7 +96,7 @@ Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
 Filter.prototype.processAndCacheFile =
     function processAndCacheFile(srcDir, destDir, relativePath) {
   var self = this;
-  var cacheEntry = this._cache[relativePath];
+  var cacheEntry = this._cache.get(relativePath);
 
   if (cacheEntry !== void 0 &&
       cacheEntry.hash === hash(cacheEntry.inputFiles)) {
@@ -144,13 +151,12 @@ Filter.prototype.processAndCacheFile =
       var cachePath = self.cachePath + '/' + cacheFile;
       copyDereferenceSync(outputPath, cachePath);
     }
-    var result = self._cache[relativePath] = {
+    return self._cache.set(relativePath, {
       hash: hash(inputFiles),
       inputFiles: inputFiles,
       outputFiles: outputFiles,
       cacheFiles: cacheFiles
-    };
-    return result;
+    });
   }
 };
 
