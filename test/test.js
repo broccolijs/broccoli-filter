@@ -82,6 +82,10 @@ describe('Filter', function() {
     });
   }
 
+  function remove(relativePath) {
+    fs.unlinkSync(relativePath);
+  }
+
   it('should throw if called as a function', function() {
     expect(function() {
       return Filter();
@@ -133,7 +137,6 @@ describe('Filter', function() {
     expect(filter.canProcessFile('twerp.rs')).to.equal(false);
   });
 
-
   it('should replace matched extension with targetExtension by default',
       function() {
     function MyFilter(inputTree, options) {
@@ -178,7 +181,6 @@ describe('Filter', function() {
       expect(awk.processString.callCount).to.equal(1);
     });
   });
-
 
   it('should cache status of canProcessFile', function() {
     var disk = {
@@ -227,6 +229,63 @@ describe('Filter', function() {
     });
   });
 
+  it('should purge cache', function() {
+    var disk = {
+      'dir/a/README.md': mockfs.file({
+        content: 'Nicest dogs in need of homes',
+        mtime: new Date(1000)
+      }),
+      'dir/a/foo.js': mockfs.file({
+        content: 'Nicest dogs in need of homes',
+        mtime: new Date(1000)
+      })
+    };
+
+    mockfs(disk);
+
+    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+      return awk;
+    });
+
+    return builder('dir', {
+      glob: '**/*.md',
+      search: 'dogs',
+      replace: 'cats'
+    }).then(function(results) {
+      var awk = results.subject;
+
+      expect(existsSync('dir/a/README.md')).to.be.true;
+
+      remove('dir/a/README.md');
+
+      expect(existsSync('dir/a/README.md')).to.be.false;
+      expect(existsSync(awk.outputPasth + '/a/README.md'), 'OUTPUT: a/foo.js should still be present').to.be.false;
+
+      return results.builder();
+    }).then(function(results) {
+      var awk = results.subject;
+      expect(existsSync(awk.outputPath + '/a/README.md'), 'OUTPUT: a/foo.js should NO LONGER be present').to.be.false;
+
+      expect(existsSync('dir/a/README.md')).to.be.false;
+      write('dir/a/README.md', 'All dogs go to heaven!');
+      expect(existsSync('dir/a/README.md')).to.be.true;
+
+      return results.builder();
+    }).then(function(results) {
+      var awk = results.subject;
+      expect(existsSync(awk.outputPath + '/a/foo.js'), 'OUTPUT: a/foo.js should be once again present').to.be.true;
+    });
+  });
+
+  function existsSync(path) {
+    // node is apparently deprecating this function..
+    try {
+      fs.lstatSync(path);
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
 
   it('should not overwrite core options if they are not present', function() {
     function F(inputTree, options) { Filter.call(this, inputTree, options); }
