@@ -5,6 +5,8 @@
   "main": "filter.js",
   "scripts": {
     "test": "mocha",
+    "test:debug": "mocha debug",
+    "test:debug:brk": "mocha --debug-brk",
     "test:watch": "mocha --watch"
   },
   "repository": {
