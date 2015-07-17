@@ -277,6 +277,50 @@ describe('Filter', function() {
     });
   });
 
+  it('replaces stale entries', function() {
+    var disk = {
+      'dir/a/README.md': mockfs.file({
+        content: 'Nicest dogs in need of homes',
+        mtime: new Date(1000)
+      }),
+      'dir/a/foo.js': mockfs.file({
+        content: 'Nicest dogs in need of homes',
+        mtime: new Date(1000)
+      })
+    };
+
+    mockfs(disk);
+
+    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+      return awk;
+    });
+
+    return builder('dir', {
+      glob: '**/*.md',
+      search: 'dogs',
+      replace: 'cats'
+    }).then(function(results) {
+      var awk = results.subject;
+
+      expect(existsSync('dir/a/README.md')).to.be.true;
+
+      write('dir/a/README.md', 'such changes');
+
+      expect(existsSync('dir/a/README.md')).to.be.true;
+
+      return results.builder();
+    }).then(function(results) {
+      var awk = results.subject;
+
+      expect(existsSync('dir/a/README.md')).to.be.true;
+
+      write('dir/a/README.md', 'such changes');
+
+      expect(existsSync('dir/a/README.md')).to.be.true;
+    });
+  });
+
+
   function existsSync(path) {
     // node is apparently deprecating this function..
     try {
