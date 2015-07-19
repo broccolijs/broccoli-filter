@@ -4,6 +4,7 @@ var fs = require('fs');
 var path = require('path');
 var mkdirp = require('mkdirp');
 var Promise = require('rsvp').Promise;
+var Plugin = require('broccoli-plugin');
 var helpers = require('broccoli-kitchen-sink-helpers');
 var walkSync = require('walk-sync');
 var mapSeries = require('promise-map-series');
@@ -15,19 +16,22 @@ var keyForFile = require('./key-for-file');
 
 module.exports = Filter;
 
+Filter.prototype = Object.create(Plugin.prototype);
+Filter.prototype.constructor = Filter;
 function Filter(inputTree, options) {
   if (!this || !(this instanceof Filter) ||
       Object.getPrototypeOf(this) === Filter.prototype) {
     throw new TypeError('Filter is an abstract class and must be sub-classed');
   }
 
-  this.inputTree = inputTree;
   var name = 'cauliflower-filter:' + (this.constructor.name);
   if (this.description) {
     name += ' > [' + this.description + ']';
   }
 
   this._debug = debugGenerator(name);
+
+  Plugin.call(this, [inputTree]);
 
   /* Destructuring assignment in node 0.12.2 would be really handy for this! */
   if (options) {
@@ -46,9 +50,9 @@ function Filter(inputTree, options) {
   this._destFilePathCache = Object.create(null);
 }
 
-Filter.prototype.rebuild = function() {
+Filter.prototype.build = function build() {
   var self = this;
-  var srcDir = this.inputPath;
+  var srcDir = this.inputPaths[0];
   var destDir = this.outputPath;
   var paths = walkSync(srcDir);
 
