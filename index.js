@@ -29,19 +29,19 @@ Filter.prototype.build = function (readTree, destDir) {
   var srcDir = this.inputPaths[0]
   var destDir = this.outputPath
 
-    var paths = walkSync(srcDir)
+  var paths = walkSync(srcDir)
 
-    return mapSeries(paths, function (relativePath) {
-      if (relativePath.slice(-1) === '/') {
-        mkdirp.sync(destDir + '/' + relativePath)
+  return mapSeries(paths, function (relativePath) {
+    if (relativePath.slice(-1) === '/') {
+      mkdirp.sync(destDir + '/' + relativePath)
+    } else {
+      if (self.canProcessFile(relativePath)) {
+        return self.processAndCacheFile(srcDir, destDir, relativePath)
       } else {
-        if (self.canProcessFile(relativePath)) {
-          return self.processAndCacheFile(srcDir, destDir, relativePath)
-        } else {
-          symlinkOrCopySync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
-        }
+        symlinkOrCopySync(srcDir + '/' + relativePath, destDir + '/' + relativePath)
       }
-    })
+    }
+  })
 }
 
 Filter.prototype.canProcessFile = function (relativePath) {
