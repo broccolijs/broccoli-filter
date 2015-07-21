@@ -1,5 +1,7 @@
 # master
 
+# 0.2.0
+
 * Derive from new broccoli-plugin base class. Notably, this means that
   subclasses always must call `Filter.call(this, inputTree)` in their
   constructors, instead of settings `this.inputTree = inputTree`.
