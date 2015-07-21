@@ -2,8 +2,7 @@ var fs = require('fs')
 var path = require('path')
 var mkdirp = require('mkdirp')
 var Promise = require('rsvp').Promise
-var quickTemp = require('quick-temp')
-var Writer = require('broccoli-writer')
+var Plugin = require('broccoli-plugin')
 var helpers = require('broccoli-kitchen-sink-helpers')
 var walkSync = require('walk-sync')
 var mapSeries = require('promise-map-series')
@@ -11,13 +10,13 @@ var symlinkOrCopySync = require('symlink-or-copy').sync
 
 
 module.exports = Filter
-Filter.prototype = Object.create(Writer.prototype)
+Filter.prototype = Object.create(Plugin.prototype)
 Filter.prototype.constructor = Filter
-function Filter (inputTree, options) {
-  if (!inputTree) {
-    throw new Error('broccoli-filter must be passed an inputTree, instead it received `undefined`');
+function Filter (inputNode, options) {
+  if (!inputNode) {
+    throw new Error('broccoli-filter must be passed an inputNode, instead it received `undefined`');
   }
-  this.inputTree = inputTree
+  Plugin.call(this, [inputNode])
   options = options || {}
   if (options.extensions != null) this.extensions = options.extensions
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
@@ -25,14 +24,11 @@ function Filter (inputTree, options) {
   if (options.outputEncoding !== undefined) this.outputEncoding = options.outputEncoding
 }
 
-Filter.prototype.getCacheDir = function () {
-  return quickTemp.makeOrReuse(this, 'tmpCacheDir')
-}
-
-Filter.prototype.write = function (readTree, destDir) {
+Filter.prototype.build = function (readTree, destDir) {
   var self = this
+  var srcDir = this.inputPaths[0]
+  var destDir = this.outputPath
 
-  return readTree(this.inputTree).then(function (srcDir) {
     var paths = walkSync(srcDir)
 
     return mapSeries(paths, function (relativePath) {
@@ -46,12 +42,6 @@ Filter.prototype.write = function (readTree, destDir) {
         }
       }
     })
-  })
-}
-
-Filter.prototype.cleanup = function () {
-  quickTemp.remove(this, 'tmpCacheDir')
-  Writer.prototype.cleanup.call(this)
 }
 
 Filter.prototype.canProcessFile = function (relativePath) {
@@ -105,7 +95,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
     for (var i = 0; i < cacheEntry.outputFiles.length; i++) {
       var dest = destDir + '/' + cacheEntry.outputFiles[i]
       mkdirp.sync(path.dirname(dest))
-      symlinkOrCopySync(self.getCacheDir() + '/' + cacheEntry.cacheFiles[i], dest)
+      symlinkOrCopySync(self.cachePath + '/' + cacheEntry.cacheFiles[i], dest)
     }
   }
 
@@ -121,7 +111,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
 
       helpers.copyPreserveSync(
         destDir + '/' + cacheEntry.outputFiles[i],
-        self.getCacheDir() + '/' + cacheFile)
+        self.cachePath + '/' + cacheFile)
     }
     cacheEntry.hash = hash(cacheEntry.inputFiles)
     self._cache[relativePath] = cacheEntry

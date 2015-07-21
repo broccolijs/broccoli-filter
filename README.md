@@ -5,6 +5,26 @@ one-to-one.
 
 Documentation to follow.
 
+### Upgrading from 0.1.x to 0.2.x
+
+You must now call the base class constructor. For example:
+
+```js
+// broccoli-filter 0.1.x:
+function MyPlugin(inputTree) {
+  this.inputTree = inputTree;
+}
+
+// broccoli-filter 0.2.x:
+function MyPlugin(inputNode) {
+  Filter.call(this, inputNode);
+}
+```
+
+Note that "node" is simply new terminology for "tree".
+
+### Source Maps
+
 **Can this help with compilers that are almost 1:1, like a minifier that takes
 a `.js` and `.js.map` file and outputs a `.js` and `.js.map` file?**
 
