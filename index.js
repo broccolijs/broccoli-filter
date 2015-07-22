@@ -75,6 +75,7 @@ Filter.prototype.processAndCacheFile = function (srcDir, destDir, relativePath) 
         return self.processFile(srcDir, destDir, relativePath)
       })
       .catch(function (err) {
+        if (err === null || err === undefined) err = new Error('null/undefined exception')
         // Augment for helpful error reporting
         err.file = relativePath
         err.treeDir = srcDir
