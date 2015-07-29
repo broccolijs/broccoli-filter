@@ -1,6 +1,6 @@
 {
   "name": "cauliflower-filter",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Broccoli-filter, implemented ontop of the rebuild api()",
   "main": "filter.js",
   "scripts": {
