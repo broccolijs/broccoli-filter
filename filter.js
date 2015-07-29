@@ -1,4 +1,3 @@
-
 'use strict';
 
 var fs = require('fs');
@@ -11,6 +10,8 @@ var mapSeries = require('promise-map-series');
 var symlinkOrCopySync = require('symlink-or-copy').sync;
 var copyDereferenceSync = require('copy-dereference').sync;
 var Cache = require('./cache');
+var debugGenerator = require('debug');
+var keyForFile = require('./key-for-file');
 
 module.exports = Filter;
 
@@ -19,18 +20,25 @@ function Filter(inputTree, options) {
       Object.getPrototypeOf(this) === Filter.prototype) {
     throw new TypeError('Filter is an abstract class and must be sub-classed');
   }
+
   this.inputTree = inputTree;
+  var name = 'cauliflower-filter:' + (this.constructor.name);
+  if (this.description) {
+    name += ' > [' + this.description + ']';
+  }
+
+  this._debug = debugGenerator(name);
 
   /* Destructuring assignment in node 0.12.2 would be really handy for this! */
   if (options) {
     if (options.extensions != null)
-        this.extensions = options.extensions;
+      this.extensions = options.extensions;
     if (options.targetExtension != null)
-        this.targetExtension = options.targetExtension;
+      this.targetExtension = options.targetExtension;
     if (options.inputEncoding != null)
-        this.inputEncoding = options.inputEncoding;
+      this.inputEncoding = options.inputEncoding;
     if (options.outputEncoding != null)
-        this.outputEncoding = options.outputEncoding;
+      this.outputEncoding = options.outputEncoding;
   }
 
   this._cache = new Cache();
@@ -96,9 +104,19 @@ Filter.prototype.processAndCacheFile =
   var self = this;
   var cacheEntry = this._cache.get(relativePath);
 
-  if (cacheEntry !== void 0 &&
-      cacheEntry.hash === hash(srcDir, cacheEntry.inputFile)) {
-    return symlinkOrCopyFromCache(cacheEntry, destDir, relativePath);
+  if (cacheEntry) {
+    var hashResult = hash(srcDir, cacheEntry.inputFile);
+
+    if (cacheEntry.hash.hash === hashResult.hash) {
+      this._debug('cache hit: %s', relativePath);
+
+      return symlinkOrCopyFromCache(cacheEntry, destDir, relativePath);
+    } else {
+      this._debug('cache miss: %s \n  - previous: %o \n  - next:     %o ', relativePath, cacheEntry.hash.key, hashResult.key);
+    }
+
+  } else {
+    this._debug('cache prime: %s', relativePath);
   }
 
   return Promise.resolve().
@@ -164,9 +182,19 @@ Filter.prototype.processString =
       '`processString()` method.');
 };
 
-
 function hash(src, filePath) {
-  return helpers.hashTree(src + '/' + filePath);
+  var path = src + '/' + filePath;
+  var key = keyForFile(path);
+
+  return {
+    key: key,
+    hash: helpers.hashStrings([
+      path,
+      key.size,
+      key.mode,
+      key.mtime
+    ])
+  };
 }
 
 function symlinkOrCopyFromCache(entry, dest, relativePath) {
