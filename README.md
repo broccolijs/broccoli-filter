@@ -51,6 +51,21 @@ class Filter {
 }
 ```
 
+### Options
+
+* `extensions`: An array of file extensions to process, e.g. `['md', 'markdown']`.
+* `targetExtension`: The file extension of the corresponding output files, e.g.
+  `'html'`.
+* `inputEncoding`: The character encoding used for reading input files to be
+  processed (default: `'utf8'`). For binary files, pass `null` to receive a
+  `Buffer` object in `processString`.
+* `outputEncoding`: The character encoding used for writing output files after
+  processing (default: `'utf8'`). For binary files, pass `null` and return a
+  `Buffer` object from `processString`.
+
+All options can also be set on the prototype instead of being passed into the
+constructor. <!-- This was a regrettable choice. -->
+
 ### Example Usage
 
 ```js
