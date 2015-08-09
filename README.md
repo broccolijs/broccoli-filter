@@ -67,8 +67,7 @@ class Filter {
   see there.
 
 All options except `name` and `annotation` can also be set on the prototype
-instead of being passed into the constructor. <!-- This was a regrettable
-choice. -->
+instead of being passed into the constructor.
 
 ### Example Usage
 
