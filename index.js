@@ -27,7 +27,7 @@ function Filter (inputNode, options) {
   if (options.outputEncoding !== undefined) this.outputEncoding = options.outputEncoding
 }
 
-Filter.prototype.build = function (readTree, destDir) {
+Filter.prototype.build = function () {
   var self = this
   var srcDir = this.inputPaths[0]
   var destDir = this.outputPath
