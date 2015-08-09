@@ -13,7 +13,15 @@ class Filter {
    * Enforces that it is invoked on an instance of a class which prototypically
    * inherits from Filter, and which is not itself Filter.
    */
-  constructor(inputTree: BroccoliTree, options: FilterOptions): Filter;
+  constructor(inputNode: BroccoliNode, options: FilterOptions): Filter;
+
+  /**
+   * Abstract method `processString`: must be implemented on subclasses of
+   * Filter.
+   *
+   * The return value is written as the contents of the output file
+   */
+  abstract processString(contents: string, relativePath: string): string;
 
   /**
    * Virtual method `canProcessFile`: determine whether hard processing is used
@@ -40,67 +48,44 @@ class Filter {
    * invoked again for a given relative path.
    */
   virtual getDestFilePath(relativePath: string): string;
-
-  /**
-   * Abstract method `processString`: must be implemented on subclasses of
-   * Filter.
-   *
-   * The return value is written as the contents of the output file
-   */
-  abstract processString(contents: string, relativePath: string): string;
 }
 ```
 
-### Example use:
+### Example Usage
 
 ```js
-'use strict';
-var Filter = require('cauliflower-filter');
+var Filter = require('broccoli-filter');
 
-function Awk(inputTree, search, replace) {
-  Filter.call(this, inputTree);
+Awk.prototype = Object.create(Filter.prototype);
+Awk.prototype.constructor = Awk;
+function Awk(inputNode, search, replace, options) {
+  options = options || {};
+  Filter.call(this, inputNode, {
+    annotation: options.annotation
+  });
   this.search = search;
   this.replace = replace;
 }
 
-Awk.prototype = Object.create(Filter.prototype, {
-  constructor: {
-    enumerable: false,
-    configurable: true,
-    writable: false,
-    value: Awk
-  }
-});
-
-Awk.prototype.canProcessFile = function(relativePath) {
-  return true;
-};
-
-Awk.prototype.getDestFilePath = function(relativePath) {
-  return relativePath;
-};
+Awk.prototype.extensions = ['txt'];
+Awk.prototype.targetExtension = 'txt';
 
 Awk.prototype.processString = function(content, relativePath) {
   return content.replace(this.search, this.replace);
 };
+```
 
-var funnel = new Funnel('', {
-  files: [
-    'foo.txt',
-    'bar.txt',
-    'baz.txt'
-  ]
-});
-var tree = new Awk(funnel, 'ES6', 'ECMAScript 2015');
+In `Brocfile.js`, use your new `Awk` plugin like so:
 
-var builder = new require('broccoli').Builder(tree);
-builder.build();
+```
+var node = new Awk('docs', 'ES6', 'ECMAScript 2015');
 
+module.exports = node;
 ```
 
 ## FAQ
 
-### Upgrading from 0.1.x to 0.2.x
+### Upgrading from 0.1.x to 1.x
 
 You must now call the base class constructor. For example:
 
@@ -110,7 +95,7 @@ function MyPlugin(inputTree) {
   this.inputTree = inputTree;
 }
 
-// broccoli-filter 0.2.x:
+// broccoli-filter 1.x:
 function MyPlugin(inputNode) {
   Filter.call(this, inputNode);
 }
