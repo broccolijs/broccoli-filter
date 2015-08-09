@@ -15,7 +15,6 @@ replacement of broccoli-filter.
 
 Key Differences                   | cauliflower-filter | broccoli-filter
 --------------------------------- | ------------------ | ---------------
-Output path stable across builds  | ✓                  | ✘
 Test coverage                     | ✓                  | ✘
 
 ## API
