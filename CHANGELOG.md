@@ -1,5 +1,7 @@
 # master
 
+* Bump without change
+
 # 0.2.0
 
 * Derive from new broccoli-plugin base class. Notably, this means that
