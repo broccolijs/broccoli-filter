@@ -1,5 +1,7 @@
 # master
 
+# 1.1.0
+
 * Add `name` and `annotation` options
 
 # 1.0.0
