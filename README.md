@@ -62,9 +62,13 @@ class Filter {
 * `outputEncoding`: The character encoding used for writing output files after
   processing (default: `'utf8'`). For binary files, pass `null` and return a
   `Buffer` object from `processString`.
+* `name`, `annotation`: Same as
+  [broccoli-plugin](https://github.com/broccolijs/broccoli-plugin#new-plugininputnodes-options);
+  see there.
 
-All options can also be set on the prototype instead of being passed into the
-constructor. <!-- This was a regrettable choice. -->
+All options except `name` and `annotation` can also be set on the prototype
+instead of being passed into the constructor. <!-- This was a regrettable
+choice. -->
 
 ### Example Usage
 

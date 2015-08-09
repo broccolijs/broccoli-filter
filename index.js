@@ -16,8 +16,11 @@ function Filter (inputNode, options) {
   if (!inputNode) {
     throw new Error('broccoli-filter must be passed an inputNode, instead it received `undefined`');
   }
-  Plugin.call(this, [inputNode])
   options = options || {}
+  Plugin.call(this, [inputNode], {
+    name: options.name,
+    annotation: options.annotation
+  })
   if (options.extensions != null) this.extensions = options.extensions
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
   if (options.inputEncoding !== undefined) this.inputEncoding = options.inputEncoding

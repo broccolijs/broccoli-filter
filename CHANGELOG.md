@@ -1,5 +1,7 @@
 # master
 
+* Add `name` and `annotation` options
+
 # 1.0.0
 
 * Bump without change
