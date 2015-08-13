@@ -8,13 +8,17 @@ var makeTestHelper = broccoliTestHelpers.makeTestHelper;
 var cleanupBuilders = broccoliTestHelpers.cleanupBuilders;
 
 var inherits = require('util').inherits;
-var _mockfs = require('mock-fs');
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 var path = require('path');
 var Builder = require('broccoli').Builder;
 var Filter = require('../filter.js');
 var minimatch = require('minimatch');
+var rimraf = require('rimraf').sync;
+var walkSync = require('walk-sync');
+var copy = require('copy-dereference').sync;
+
+var fixturePath = path.join(process.cwd(), 'test', 'fixtures');
 
 function ReplaceFilter(inputTree, options) {
   if (!this) return new ReplaceFilter(inputTree, options);
@@ -47,15 +51,6 @@ function IncompleteFilter(inputTree, options) {
 inherits(IncompleteFilter, Filter);
 
 describe('Filter', function() {
-  function mockfs(config) {
-    config.tmp = _mockfs.directory();
-    return _mockfs(config);
-  }
-  mockfs.file = _mockfs.file;
-  mockfs.directory = _mockfs.directory;
-  mockfs.symlink = _mockfs.symlink;
-  mockfs.restore = function() { return _mockfs.restore(); }
-
   function makeBuilder(plugin, dir, prepSubject) {
     return makeTestHelper({
       subject: plugin,
@@ -65,8 +60,7 @@ describe('Filter', function() {
   }
 
   afterEach(function() {
-    cleanupBuilders();
-    mockfs.restore();
+    return cleanupBuilders();
   });
 
   function read(relativePath, encoding) {
@@ -157,40 +151,27 @@ describe('Filter', function() {
 
   it('should processString only when canProcessFile returns true',
       function() {
-    var disk = {
-      'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
-                                      mtime: new Date(1000)}),
-      'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
-                                   mtime: new Date(1000)})
-    };
-    mockfs(disk);
-    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+    var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
       sinon.spy(awk, 'processString');
       return awk;
     });
+
     return builder('dir', {
       glob: '**/*.md',
       search: 'dogs',
       replace: 'cats'
     }).then(function(results) {
       var awk = results.subject;
-      expect(read(awk.outputPath + '/a/README.md')).
+      expect(read(results.directory + '/a/README.md')).
           to.equal('Nicest cats in need of homes');
-      expect(read(awk.outputPath + '/a/foo.js')).
+      expect(read(results.directory + '/a/foo.js')).
           to.equal('Nicest dogs in need of homes');
       expect(awk.processString.callCount).to.equal(1);
     });
   });
 
   it('should cache status of canProcessFile', function() {
-    var disk = {
-      'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
-                                      mtime: new Date(1000)}),
-      'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
-                                   mtime: new Date(1000)})
-    };
-    mockfs(disk);
-    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+    var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
       sinon.spy(awk, 'canProcessFile');
       return awk;
     });
@@ -202,96 +183,74 @@ describe('Filter', function() {
     }).then(function(results) {
       var awk = results.subject;
 
-      expect(read(awk.outputPath + '/a/README.md')).
+      expect(read(results.directory + '/a/README.md')).
           to.equal('Nicest cats in need of homes');
-      expect(read(awk.outputPath + '/a/foo.js')).
+      expect(read(results.directory + '/a/foo.js')).
           to.equal('Nicest dogs in need of homes');
 
-      expect(awk.canProcessFile.callCount).to.equal(2);
+      expect(awk.canProcessFile.callCount).to.equal(3);
 
-      write('dir/a/CONTRIBUTING.md', 'All dogs go to heaven!');
+      var newFile = path.join(fixturePath, 'dir', 'a', 'CONTRIBUTING.md');
+      write(newFile, 'All dogs go to heaven!');
 
       return results.builder();
-    }).then(function(results) {
+    })
+    .then(function(results) {
       var awk = results.subject;
-      expect(read(awk.outputPath + '/a/README.md')).
+      expect(read(results.directory + '/a/README.md')).
           to.equal('Nicest cats in need of homes');
-      expect(read(awk.outputPath + '/a/foo.js')).
+      expect(read(results.directory + '/a/foo.js')).
           to.equal('Nicest dogs in need of homes');
-      expect(read(awk.outputPath + '/a/CONTRIBUTING.md')).
+      expect(read(results.directory + '/a/CONTRIBUTING.md')).
           to.equal('All cats go to heaven!');
-      expect(awk.canProcessFile.callCount).to.equal(3);
+      expect(read(results.directory + '/a/bar/bar.js')).
+              to.equal('Dogs... who needs dogs?');
+      expect(awk.canProcessFile.callCount).to.equal(4);
 
       return results.builder();
     }).then(function(results) {
       var awk = results.subject;
-      expect(awk.canProcessFile.callCount).to.equal(3);
+      rimraf(path.join(fixturePath, 'dir', 'a', 'CONTRIBUTING.md'));
+      expect(awk.canProcessFile.callCount).to.equal(4);
     });
   });
 
   it('should purge cache', function() {
-    var disk = {
-      'dir/a/README.md': mockfs.file({
-        content: 'Nicest dogs in need of homes',
-        mtime: new Date(1000)
-      }),
-      'dir/a/foo.js': mockfs.file({
-        content: 'Nicest dogs in need of homes',
-        mtime: new Date(1000)
-      })
-    };
 
-    mockfs(disk);
-
-    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+    var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
       return awk;
     });
+    var fileForRemoval = path.join(fixturePath, 'dir', 'a', 'README.md');
 
     return builder('dir', {
       glob: '**/*.md',
       search: 'dogs',
       replace: 'cats'
     }).then(function(results) {
-      var awk = results.subject;
+      expect(existsSync(fileForRemoval)).to.be.true;
+      rimraf(fileForRemoval);
 
-      expect(existsSync('dir/a/README.md')).to.be.true;
-
-      remove('dir/a/README.md');
-
-      expect(existsSync('dir/a/README.md')).to.be.false;
-      expect(existsSync(awk.outputPasth + '/a/README.md'), 'OUTPUT: a/foo.js should still be present').to.be.false;
+      expect(existsSync(fileForRemoval)).to.be.false;
+      expect(existsSync(results.directory + '/a/README.md')).to.be.true;
 
       return results.builder();
     }).then(function(results) {
-      var awk = results.subject;
-      expect(existsSync(awk.outputPath + '/a/README.md'), 'OUTPUT: a/foo.js should NO LONGER be present').to.be.false;
+      expect(existsSync(results.directory + '/a/README.md'), 'OUTPUT: a/foo.js should NO LONGER be present').to.be.false;
 
-      expect(existsSync('dir/a/README.md')).to.be.false;
-      write('dir/a/README.md', 'All dogs go to heaven!');
-      expect(existsSync('dir/a/README.md')).to.be.true;
+      expect(existsSync(fileForRemoval)).to.be.false;
+      fs.writeFileSync(fileForRemoval, 'Nicest cats in need of homes');
+      expect(existsSync(fileForRemoval)).to.be.true;
 
       return results.builder();
     }).then(function(results) {
-      var awk = results.subject;
-      expect(existsSync(awk.outputPath + '/a/foo.js'), 'OUTPUT: a/foo.js should be once again present').to.be.true;
+      expect(existsSync(results.directory + '/a/foo.js'), 'OUTPUT: a/foo.js should be once again present').to.be.true;
     });
   });
 
   it('replaces stale entries', function() {
-    var disk = {
-      'dir/a/README.md': mockfs.file({
-        content: 'Nicest dogs in need of homes',
-        mtime: new Date(1000)
-      }),
-      'dir/a/foo.js': mockfs.file({
-        content: 'Nicest dogs in need of homes',
-        mtime: new Date(1000)
-      })
-    };
+    var fileForChange = path.join(fixturePath, 'dir', 'a', 'README.md');
 
-    mockfs(disk);
-
-    var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+    var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
       return awk;
     });
 
@@ -302,21 +261,21 @@ describe('Filter', function() {
     }).then(function(results) {
       var awk = results.subject;
 
-      expect(existsSync('dir/a/README.md')).to.be.true;
+      expect(existsSync(fileForChange)).to.be.true;
 
-      write('dir/a/README.md', 'such changes');
+      fs.writeFileSync(fileForChange, 'such changes');
 
-      expect(existsSync('dir/a/README.md')).to.be.true;
+      expect(existsSync(fileForChange)).to.be.true;
 
       return results.builder();
     }).then(function(results) {
-      var awk = results.subject;
+      expect(existsSync(fileForChange)).to.be.true;
 
-      expect(existsSync('dir/a/README.md')).to.be.true;
+      fs.writeFileSync(fileForChange, 'such changes');
 
-      write('dir/a/README.md', 'such changes');
-
-      expect(existsSync('dir/a/README.md')).to.be.true;
+      expect(existsSync(fileForChange)).to.be.true;
+    }).then(function() {
+      fs.writeFileSync(fileForChange, 'Nicest cats in need of homes');
     });
   });
 
@@ -363,18 +322,7 @@ describe('Filter', function() {
     });
 
     it('should not effect the current cwd', function() {
-      var disk = {
-        'dir/a/README.md': mockfs.file({content: 'Nicest dogs in need of homes',
-                                        mtime: new Date(1000)}),
-        'dir/a/foo.js': mockfs.file({content: 'Nicest dogs in need of homes',
-                                     mtime: new Date(1000)}),
-        'dir/a/bar/bar.js': mockfs.file({content: 'Dogs... who needs dogs?',
-                                     mtime: new Date(1000)})
-      };
-
-      mockfs(disk);
-
-      var builder = makeBuilder(ReplaceFilter, '.', function(awk) {
+      var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
         sinon.spy(awk, 'canProcessFile');
         return awk;
       });
