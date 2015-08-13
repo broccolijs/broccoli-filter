@@ -126,7 +126,7 @@ Filter.prototype.processFile = function (srcDir, destDir, relativePath) {
   var inputEncoding = (this.inputEncoding === undefined) ? 'utf8' : this.inputEncoding
   var outputEncoding = (this.outputEncoding === undefined) ? 'utf8' : this.outputEncoding
   var string = fs.readFileSync(srcDir + '/' + relativePath, { encoding: inputEncoding })
-  return Promise.resolve(self.processString(string, relativePath))
+  return Promise.resolve(self.processString(string, relativePath, srcDir))
     .then(function (outputString) {
       var outputPath = self.getDestFilePath(relativePath)
       fs.writeFileSync(destDir + '/' + outputPath, outputString, { encoding: outputEncoding })
