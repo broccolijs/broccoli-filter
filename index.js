@@ -25,6 +25,9 @@ function Filter (inputNode, options) {
   if (options.targetExtension != null) this.targetExtension = options.targetExtension
   if (options.inputEncoding !== undefined) this.inputEncoding = options.inputEncoding
   if (options.outputEncoding !== undefined) this.outputEncoding = options.outputEncoding
+  if (!this.extensions) {
+    throw 'You must provide extensions to broccoli-filter as an array of strings'
+  }
 }
 
 Filter.prototype.build = function () {
