@@ -1,21 +1,7 @@
-cauliflower-filter
-==================
+# broccoli-filter
 
-[![Build Status](https://travis-ci.org/caitp/cauliflower-filter.svg?branch=master)](https://travis-ci.org/caitp/cauliflower-filter)
-[![Coverage Status](https://img.shields.io/coveralls/caitp/cauliflower-filter.svg)](https://coveralls.io/r/caitp/cauliflower-filter?branch=master)
-[![dependencies](https://img.shields.io/david/caitp/cauliflower-filter.svg?style=flat)](https://david-dm.org/caitp/cauliflower-filter)
-[![NPM Version](http://img.shields.io/npm/v/cauliflower-filter.svg)](https://www.npmjs.org/package/cauliflower-filter)
-
-[broccoli-filter](https://github.com/broccolijs/broccoli-filter) built on the
-new rebuild() api, ensuring stable outputs across builds. Also offers test
-coverage to ensure that this plugin behaves as expected.
-
-Cauliflower-filter aims to be 100% API compatible and suitable as a drop-in
-replacement of broccoli-filter.
-
-Key Differences                   | cauliflower-filter | broccoli-filter
---------------------------------- | ------------------ | ---------------
-Test coverage                     | ✓                  | ✘
+Helper base class for Broccoli plugins that map input files into output files
+one-to-one.
 
 ## API
 
@@ -27,7 +13,15 @@ class Filter {
    * Enforces that it is invoked on an instance of a class which prototypically
    * inherits from Filter, and which is not itself Filter.
    */
-  constructor(inputTree: BroccoliTree, options: FilterOptions): Filter;
+  constructor(inputNode: BroccoliNode, options: FilterOptions): Filter;
+
+  /**
+   * Abstract method `processString`: must be implemented on subclasses of
+   * Filter.
+   *
+   * The return value is written as the contents of the output file
+   */
+  abstract processString(contents: string, relativePath: string): string;
 
   /**
    * Virtual method `canProcessFile`: determine whether hard processing is used
@@ -54,73 +48,86 @@ class Filter {
    * invoked again for a given relative path.
    */
   virtual getDestFilePath(relativePath: string): string;
-
-  /**
-   * Abstract method `processString`: must be implemented on subclasses of
-   * Filter.
-   *
-   * The return value is written as the contents of the output file
-   */
-  abstract processString(contents: string, relativePath: string): string;
 }
 ```
 
-### Example use:
+### Options
+
+* `extensions`: An array of file extensions to process, e.g. `['md', 'markdown']`.
+* `targetExtension`: The file extension of the corresponding output files, e.g.
+  `'html'`.
+* `inputEncoding`: The character encoding used for reading input files to be
+  processed (default: `'utf8'`). For binary files, pass `null` to receive a
+  `Buffer` object in `processString`.
+* `outputEncoding`: The character encoding used for writing output files after
+  processing (default: `'utf8'`). For binary files, pass `null` and return a
+  `Buffer` object from `processString`.
+* `name`, `annotation`: Same as
+  [broccoli-plugin](https://github.com/broccolijs/broccoli-plugin#new-plugininputnodes-options);
+  see there.
+
+All options except `name` and `annotation` can also be set on the prototype
+instead of being passed into the constructor.
+
+### Example Usage
 
 ```js
-'use strict';
-var Filter = require('cauliflower-filter');
+var Filter = require('broccoli-filter');
 
-function Awk(inputTree, search, replace) {
-  Filter.call(this, inputTree);
+Awk.prototype = Object.create(Filter.prototype);
+Awk.prototype.constructor = Awk;
+function Awk(inputNode, search, replace, options) {
+  options = options || {};
+  Filter.call(this, inputNode, {
+    annotation: options.annotation
+  });
   this.search = search;
   this.replace = replace;
 }
 
-Awk.prototype = Object.create(Filter.prototype, {
-  constructor: {
-    enumerable: false,
-    configurable: true,
-    writable: false,
-    value: Awk
-  }
-});
-
-Awk.prototype.canProcessFile = function(relativePath) {
-  return true;
-};
-
-Awk.prototype.getDestFilePath = function(relativePath) {
-  return relativePath;
-};
+Awk.prototype.extensions = ['txt'];
+Awk.prototype.targetExtension = 'txt';
 
 Awk.prototype.processString = function(content, relativePath) {
   return content.replace(this.search, this.replace);
 };
-
-var funnel = new Funnel('', {
-  files: [
-    'foo.txt',
-    'bar.txt',
-    'baz.txt'
-  ]
-});
-var tree = new Awk(funnel, 'ES6', 'ECMAScript 2015');
-
-var builder = new require('broccoli').Builder(tree);
-builder.build();
-
 ```
 
-## License
+In `Brocfile.js`, use your new `Awk` plugin like so:
 
-The MIT License (MIT)
+```
+var node = new Awk('docs', 'ES6', 'ECMAScript 2015');
 
-Copyright (c) 2015 Caitlin Potter & Contributors.
+module.exports = node;
+```
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+## FAQ
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+### Upgrading from 0.1.x to 1.x
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+You must now call the base class constructor. For example:
 
+```js
+// broccoli-filter 0.1.x:
+function MyPlugin(inputTree) {
+  this.inputTree = inputTree;
+}
+
+// broccoli-filter 1.x:
+function MyPlugin(inputNode) {
+  Filter.call(this, inputNode);
+}
+```
+
+Note that "node" is simply new terminology for "tree".
+
+### Source Maps
+
+**Can this help with compilers that are almost 1:1, like a minifier that takes
+a `.js` and `.js.map` file and outputs a `.js` and `.js.map` file?**
+
+Not at the moment. I don't know yet how to implement this and still have the
+API look beautiful. We also have to make sure that caching works correctly, as
+we have to invalidate if either the `.js` or the `.js.map` file changes. My
+plan is to write a source-map-aware uglifier plugin to understand this use
+case better, and then extract common code back into this `Filter` base class.
