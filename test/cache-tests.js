@@ -2,7 +2,7 @@
 
 var chai = require('chai');
 var expect = chai.expect;
-var Cache = require('../cache');
+var Cache = require('../lib/cache');
 
 describe('Cache', function() {
   var cache;
