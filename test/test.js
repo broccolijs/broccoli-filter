@@ -2,6 +2,8 @@
 
 var chai = require('chai');
 var expect = chai.expect;
+var chaiAsPromised = require('chai-as-promised');
+chai.use(chaiAsPromised);
 var sinon = require('sinon');
 var broccoliTestHelpers = require('broccoli-test-helpers');
 var makeTestHelper = broccoliTestHelpers.makeTestHelper;
@@ -31,11 +33,11 @@ function ReplaceFilter(inputTree, options) {
 
 inherits(ReplaceFilter, Filter);
 
-ReplaceFilter.prototype.canProcessFile = function(relativePath) {
+ReplaceFilter.prototype.getDestFilePath = function(relativePath) {
   if (this._glob === void 0) {
-    return Filter.prototype.canProcessFile.call(this, relativePath);
+    return Filter.prototype.getDestFilePath.call(this, relativePath);
   }
-  return minimatch(relativePath, this._glob);
+  return minimatch(relativePath, this._glob) ? relativePath : null;
 };
 
 ReplaceFilter.prototype.processString = function(contents, relativePath) {
@@ -145,7 +147,7 @@ describe('Filter', function() {
     expect(filter.getDestFilePath('foo.c')).to.equal('foo.zebra');
     expect(filter.getDestFilePath('test.js')).to.equal('test.zebra');
     expect(filter.getDestFilePath('blob.cc')).to.equal('blob.zebra');
-    expect(filter.getDestFilePath('twerp.rs')).to.equal('twerp.rs');
+    expect(filter.getDestFilePath('twerp.rs')).to.equal(null);
   });
 
 
@@ -170,49 +172,22 @@ describe('Filter', function() {
     });
   });
 
-  it('should cache status of canProcessFile', function() {
+  it('should complain if canProcessFile is true but getDestFilePath is null',
+      function() {
     var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
-      sinon.spy(awk, 'canProcessFile');
+      awk.canProcessFile = function() {
+        // We cannot return `true` here unless `getDestFilePath` also returns
+        // a path
+        return true;
+      };
       return awk;
     });
 
-    return builder('dir', {
+    return expect(builder('dir', {
       glob: '**/*.md',
       search: 'dogs',
       replace: 'cats'
-    }).then(function(results) {
-      var awk = results.subject;
-
-      expect(read(results.directory + '/a/README.md')).
-          to.equal('Nicest cats in need of homes');
-      expect(read(results.directory + '/a/foo.js')).
-          to.equal('Nicest dogs in need of homes');
-
-      expect(awk.canProcessFile.callCount).to.equal(3);
-
-      var newFile = path.join(fixturePath, 'dir', 'a', 'CONTRIBUTING.md');
-      write(newFile, 'All dogs go to heaven!');
-
-      return results.builder();
-    })
-    .then(function(results) {
-      var awk = results.subject;
-      expect(read(results.directory + '/a/README.md')).
-          to.equal('Nicest cats in need of homes');
-      expect(read(results.directory + '/a/foo.js')).
-          to.equal('Nicest dogs in need of homes');
-      expect(read(results.directory + '/a/CONTRIBUTING.md')).
-          to.equal('All cats go to heaven!');
-      expect(read(results.directory + '/a/bar/bar.js')).
-              to.equal('Dogs... who needs dogs?');
-      expect(awk.canProcessFile.callCount).to.equal(4);
-
-      return results.builder();
-    }).then(function(results) {
-      var awk = results.subject;
-      rimraf(path.join(fixturePath, 'dir', 'a', 'CONTRIBUTING.md'));
-      expect(awk.canProcessFile.callCount).to.equal(4);
-    });
+    })).to.eventually.be.rejectedWith(Error, /getDestFilePath.* is null/);
   });
 
   it('should purge cache', function() {

@@ -24,28 +24,16 @@ class Filter {
   abstract processString(contents: string, relativePath: string): string;
 
   /**
-   * Virtual method `canProcessFile`: determine whether hard processing is used
-   * to move the source file into the output directory, or whether a simple
-   * symlinking approach should be sufficient.
+   * Virtual method `getDestFilePath`: determine whether the source file should
+   * be processed, and optionally rename the output file when processing occurs.
    *
-   * By default, this method returns true if the `extensions` option is a
-   * non-empty list, and the relativePath ends with one of the extensions.
+   * Return `null` to pass the file through without processing. Return
+   * `relativePath` to process the file with `processString`. Return a
+   * different path to process the file with `processString` and rename it.
    *
-   * The results of this operation are cached automatically, and it will not be
-   * invoked again for a given relative path.
-   */
-  virtual canProcessFile(relativePath: string): boolean;
-
-  /**
-   * Virtual method `getDestFilePath`: optionally rename the output file when
-   * processing occurs.
-   *
-   * By default, if the options passed into the Filter constructor contains a
+   * By default, if the options passed into the `Filter` constructor contain a
    * property `extensions`, and `targetExtension` is supplied, the first matching
    * extension in the list is replaced with the `targetExtension` option's value.
-   *
-   * The results of this operation are cached automatically, and it will not be
-   * invoked again for a given relative path.
    */
   virtual getDestFilePath(relativePath: string): string;
 }

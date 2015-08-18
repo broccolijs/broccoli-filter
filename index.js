@@ -65,7 +65,7 @@ Filter.prototype.build = function build() {
     if (relativePath.slice(-1) === '/') {
       mkdirp.sync(destPath);
     } else {
-      if (internalCanProcessFile(self, relativePath)) {
+      if (self.canProcessFile(relativePath)) {
         return self.processAndCacheFile(srcDir, destDir, relativePath);
       } else {
         var srcPath = srcDir + '/' + relativePath;
@@ -77,14 +77,7 @@ Filter.prototype.build = function build() {
 
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
-  if (this.extensions == null || !this.extensions.length) return false;
-  for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
-    var ext = this.extensions[i];
-    if (relativePath.slice(-ext.length - 1) === '.' + ext) {
-      return true;
-    }
-  }
-  return false;
+  return !!this.getDestFilePath(relativePath);
 };
 
 Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
@@ -100,7 +93,7 @@ Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
       return relativePath;
     }
   }
-  return relativePath;
+  return null;
 }
 
 Filter.prototype.processAndCacheFile =
@@ -142,7 +135,7 @@ Filter.prototype.processAndCacheFile =
     var entry = {
       hash: hash(srcDir, relativePath),
       inputFile: relativePath,
-      outputFile: destDir + '/' + internalGetDestFilePath(self, relativePath),
+      outputFile: destDir + '/' + self.getDestFilePath(relativePath),
       cacheFile: self.cachePath + '/' + relativePath
     };
 
@@ -170,7 +163,10 @@ Filter.prototype.processFile =
 
   return Promise.resolve(this.processString(contents, relativePath)).
       then(function asyncOutputFilteredFile(outputString) {
-        var outputPath = internalGetDestFilePath(self, relativePath);
+        var outputPath = self.getDestFilePath(relativePath);
+        if (outputPath == null) {
+          throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
+        }
         outputPath = destDir + '/' + outputPath;
         mkdirp.sync(path.dirname(outputPath));
         fs.writeFileSync(outputPath, outputString, {
@@ -206,28 +202,3 @@ function symlinkOrCopyFromCache(entry, dest, relativePath) {
 
   symlinkOrCopySync(entry.cacheFile, dest + '/' + relativePath);
 }
-
-function memoize(func, cacheName) {
-  if (typeof func !== 'function') throw new TypeError('Expected a function');
-  function memoized(self, key) {
-    var cache = self[cacheName] || (self[cacheName] = Object.create(null));
-    var entry = cache[key];
-    if (entry !== void 0) return entry;
-
-    var args = [];
-    for (var i = 1, ii = arguments.length; i < ii; ++i) args.push(arguments[i]);
-    return cache[key] = func.apply(self, args);
-  }
-  return memoized;
-}
-
-var internalCanProcessFile = memoize(function canProcessFile(relativePath) {
-  return !!this.canProcessFile(relativePath);
-}, '_canProcessCache');
-
-var internalGetDestFilePath = memoize(function getDestFilePath(relativePath) {
-  var entry = this.getDestFilePath(relativePath);
-  // TODO(@caitp): Is it even worth normalizing this?
-  if (entry !== null && typeof entry !== 'string') entry = null;
-  return entry;
-}, '_destFilePathCache');
