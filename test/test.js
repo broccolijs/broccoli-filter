@@ -190,51 +190,6 @@ describe('Filter', function() {
     })).to.eventually.be.rejectedWith(Error, /getDestFilePath.* is null/);
   });
 
-  it('should cache status of canProcessFile', function() {
-    var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
-      sinon.spy(awk, 'canProcessFile');
-      return awk;
-    });
-
-    return builder('dir', {
-      glob: '**/*.md',
-      search: 'dogs',
-      replace: 'cats'
-    }).then(function(results) {
-      var awk = results.subject;
-
-      expect(read(results.directory + '/a/README.md')).
-          to.equal('Nicest cats in need of homes');
-      expect(read(results.directory + '/a/foo.js')).
-          to.equal('Nicest dogs in need of homes');
-
-      expect(awk.canProcessFile.callCount).to.equal(3);
-
-      var newFile = path.join(fixturePath, 'dir', 'a', 'CONTRIBUTING.md');
-      write(newFile, 'All dogs go to heaven!');
-
-      return results.builder();
-    })
-    .then(function(results) {
-      var awk = results.subject;
-      expect(read(results.directory + '/a/README.md')).
-          to.equal('Nicest cats in need of homes');
-      expect(read(results.directory + '/a/foo.js')).
-          to.equal('Nicest dogs in need of homes');
-      expect(read(results.directory + '/a/CONTRIBUTING.md')).
-          to.equal('All cats go to heaven!');
-      expect(read(results.directory + '/a/bar/bar.js')).
-              to.equal('Dogs... who needs dogs?');
-      expect(awk.canProcessFile.callCount).to.equal(4);
-
-      return results.builder();
-    }).then(function(results) {
-      var awk = results.subject;
-      rimraf(path.join(fixturePath, 'dir', 'a', 'CONTRIBUTING.md'));
-      expect(awk.canProcessFile.callCount).to.equal(4);
-    });
-  });
-
   it('should purge cache', function() {
 
     var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {

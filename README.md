@@ -34,9 +34,6 @@ class Filter {
    * By default, if the options passed into the `Filter` constructor contain a
    * property `extensions`, and `targetExtension` is supplied, the first matching
    * extension in the list is replaced with the `targetExtension` option's value.
-   *
-   * The results of this operation are cached automatically, and it will not be
-   * invoked again for a given relative path.
    */
   virtual getDestFilePath(relativePath: string): string;
 }
