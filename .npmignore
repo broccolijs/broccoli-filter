@@ -1,5 +1,4 @@
 *
-!filter.js
-!cache.js
-!key-for-file.js
+!lib/*.js
+!index.js
 !LICENSE
