@@ -2,7 +2,7 @@
 
 var chai = require('chai');
 var expect = chai.expect;
-var keyForFile = require('../key-for-file');
+var keyForFile = require('../lib/key-for-file');
 
 describe('keyForFile', function () {
   describe('when given a path to a directory', function () {
