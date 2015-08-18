@@ -2,6 +2,8 @@
 
 var chai = require('chai');
 var expect = chai.expect;
+var chaiAsPromised = require('chai-as-promised');
+chai.use(chaiAsPromised);
 var sinon = require('sinon');
 var broccoliTestHelpers = require('broccoli-test-helpers');
 var makeTestHelper = broccoliTestHelpers.makeTestHelper;
@@ -168,6 +170,24 @@ describe('Filter', function() {
           to.equal('Nicest dogs in need of homes');
       expect(awk.processString.callCount).to.equal(1);
     });
+  });
+
+  it('should complain if canProcessFile is true but getDestFilePath is null',
+      function() {
+    var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
+      awk.canProcessFile = function() {
+        // We cannot return `true` here unless `getDestFilePath` also returns
+        // a path
+        return true;
+      };
+      return awk;
+    });
+
+    return expect(builder('dir', {
+      glob: '**/*.md',
+      search: 'dogs',
+      replace: 'cats'
+    })).to.eventually.be.rejectedWith(Error, /getDestFilePath.* is null/);
   });
 
   it('should cache status of canProcessFile', function() {

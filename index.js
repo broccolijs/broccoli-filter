@@ -164,6 +164,9 @@ Filter.prototype.processFile =
   return Promise.resolve(this.processString(contents, relativePath)).
       then(function asyncOutputFilteredFile(outputString) {
         var outputPath = internalGetDestFilePath(self, relativePath);
+        if (outputPath == null) {
+          throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
+        }
         outputPath = destDir + '/' + outputPath;
         mkdirp.sync(path.dirname(outputPath));
         fs.writeFileSync(outputPath, outputString, {
