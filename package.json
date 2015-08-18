@@ -25,10 +25,13 @@
     "cache"
   ],
   "dependencies": {
+    "async-disk-cache": "^1.0.0",
     "broccoli-kitchen-sink-helpers": "^0.2.7",
     "broccoli-plugin": "^1.0.0",
     "copy-dereference": "^1.0.0",
     "debug": "^2.2.0",
+    "hash-for-dep": "0.0.3",
+    "md5-hex": "^1.0.2",
     "mkdirp": "^0.5.1",
     "promise-map-series": "^0.2.1",
     "rsvp": "^3.0.18",
