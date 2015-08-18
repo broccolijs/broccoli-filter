@@ -238,7 +238,10 @@ describe('Filter', function() {
       expect(existsSync(results.directory + '/a/README.md'), 'OUTPUT: a/foo.js should NO LONGER be present').to.be.false;
 
       expect(existsSync(fileForRemoval)).to.be.false;
+      return results;
+    }).finally(function() {
       fs.writeFileSync(fileForRemoval, 'Nicest cats in need of homes');
+    }).then(function(results) {
       expect(existsSync(fileForRemoval)).to.be.true;
 
       return results.builder();
@@ -312,7 +315,7 @@ describe('Filter', function() {
         to.equal('utf8');
   });
 
-  describe('proccesFile', function() {
+  describe('processFile', function() {
     beforeEach(function() {
       sinon.spy(fs, 'mkdirSync');
     });
