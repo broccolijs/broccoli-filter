@@ -1,5 +1,7 @@
 # master
 
+* Replace with @caitp's cauliflower-filter implementation and @stefanpenner's tests
+
 # 1.1.0
 
 * Add `name` and `annotation` options
