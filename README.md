@@ -1,5 +1,7 @@
 # broccoli-filter
 
+[![Build Status](https://travis-ci.org/broccolijs/broccoli-filter.svg?branch=master)](https://travis-ci.org/broccolijs/broccoli-filter)
+
 Helper base class for Broccoli plugins that map input files into output files
 one-to-one.
 
