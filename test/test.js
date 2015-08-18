@@ -31,11 +31,11 @@ function ReplaceFilter(inputTree, options) {
 
 inherits(ReplaceFilter, Filter);
 
-ReplaceFilter.prototype.canProcessFile = function(relativePath) {
+ReplaceFilter.prototype.getDestFilePath = function(relativePath) {
   if (this._glob === void 0) {
-    return Filter.prototype.canProcessFile.call(this, relativePath);
+    return Filter.prototype.getDestFilePath.call(this, relativePath);
   }
-  return minimatch(relativePath, this._glob);
+  return minimatch(relativePath, this._glob) ? relativePath : null;
 };
 
 ReplaceFilter.prototype.processString = function(contents, relativePath) {
@@ -145,7 +145,7 @@ describe('Filter', function() {
     expect(filter.getDestFilePath('foo.c')).to.equal('foo.zebra');
     expect(filter.getDestFilePath('test.js')).to.equal('test.zebra');
     expect(filter.getDestFilePath('blob.cc')).to.equal('blob.zebra');
-    expect(filter.getDestFilePath('twerp.rs')).to.equal('twerp.rs');
+    expect(filter.getDestFilePath('twerp.rs')).to.equal(null);
   });
 
 

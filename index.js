@@ -77,14 +77,7 @@ Filter.prototype.build = function build() {
 
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
-  if (this.extensions == null || !this.extensions.length) return false;
-  for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
-    var ext = this.extensions[i];
-    if (relativePath.slice(-ext.length - 1) === '.' + ext) {
-      return true;
-    }
-  }
-  return false;
+  return !!this.getDestFilePath(relativePath);
 };
 
 Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
@@ -100,7 +93,7 @@ Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
       return relativePath;
     }
   }
-  return relativePath;
+  return null;
 }
 
 Filter.prototype.processAndCacheFile =
