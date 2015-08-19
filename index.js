@@ -14,7 +14,6 @@ var Cache = require('./lib/cache');
 var debugGenerator = require('debug');
 var keyForFile = require('./lib/key-for-file');
 var PersistentCache = require('async-disk-cache');
-var hashForDep = require('hash-for-dep');
 var md5Hex = require('md5-hex');
 var Processor = require('./lib/processor');
 var defaultProccessor = require('./lib/strategies/default');
@@ -100,6 +99,17 @@ Filter.prototype.build = function build() {
  */
 Filter.prototype.baseDir = function() {
   throw Error('Filter must implement prototype.baseDir');
+};
+
+/**
+ * @public
+ *
+ * optionally override this to build a more rhobust cache key
+ * @param  {String} string The contents of a file that is being processed
+ * @return {String}        A cache key
+ */
+Filter.prototype.cacheKeyProcessString = function(string /*, relativePath*/) {
+  return md5Hex(string);
 };
 
 Filter.prototype.canProcessFile =
