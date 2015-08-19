@@ -24,7 +24,7 @@ function Filter(inputTree, options) {
     throw new TypeError('Filter is an abstract class and must be sub-classed');
   }
 
-  var name = 'cauliflower-filter:' + (this.constructor.name);
+  var name = 'broccoli-filter:' + (this.constructor.name);
   if (this.description) {
     name += ' > [' + this.description + ']';
   }
@@ -178,7 +178,7 @@ Filter.prototype.processFile =
 Filter.prototype.processString =
     function unimplementedProcessString(contents, relativePath) {
   throw new Error(
-      'When subclassing cauliflower-filter you must implement the ' +
+      'When subclassing broccoli-filter you must implement the ' +
       '`processString()` method.');
 };
 
