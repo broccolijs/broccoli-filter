@@ -16,8 +16,11 @@ var keyForFile = require('./lib/key-for-file');
 var PersistentCache = require('async-disk-cache');
 var hashForDep = require('hash-for-dep');
 var md5Hex = require('md5-hex');
+var Processor = require('./lib/processor');
+var defaultProccessor = require('./lib/strategies/default');
 
 module.exports = Filter;
+
 
 Filter.prototype = Object.create(Plugin.prototype);
 Filter.prototype.constructor = Filter;
@@ -36,6 +39,9 @@ function Filter(inputTree, options) {
 
   Plugin.call(this, [inputTree]);
 
+  this.processor = new Processor();
+  this.processor.setStrategy(defaultProccessor);
+
   /* Destructuring assignment in node 0.12.2 would be really handy for this! */
   if (options) {
     if (options.extensions != null)
@@ -48,15 +54,14 @@ function Filter(inputTree, options) {
       this.outputEncoding = options.outputEncoding;
     if (options.persist) {
       if (/^win/.test(process.platform)) {
-        console.log('Unfortunately persistent cache is currently not available on windows based systems.');
+        console.log('Unfortunately persistent cache is currently not available on windows based systems. Please see https://github.com/stefanpenner/hash-for-dep/issues/8.');
       } else {
-        this.persistent = options.persist;
-        this._peristentCache = new PersistentCache(this.cacheKey(), {
-          compression: 'deflate'
-        });
+        this.processor.setStrategy(require('./lib/strategies/persistent'));
       }
     }
   }
+
+  this.processor.init(this);
 
   this._cache = new Cache();
   this._canProcessCache = Object.create(null);
@@ -88,17 +93,6 @@ Filter.prototype.build = function build() {
   });
 };
 
-/*
- * @private
- *
- *
- * @method cachKey
- * @return {String} this filters top-level cache key
- */
-Filter.prototype.cacheKey = function() {
-  return hashForDep(this.baseDir());
-};
-
 /* @public
  *
  * @method baseDir
@@ -108,28 +102,18 @@ Filter.prototype.baseDir = function() {
   throw Error('Filter must implement prototype.baseDir');
 };
 
-/*
- * @public
- *
- * @method cacheKeyProcessString
- * @return {String} this filters top-level cache key
- */
-Filter.prototype.cacheKeyProcessString = function(string) {
-  return md5Hex(string);
-};
-
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
   return !!this.getDestFilePath(relativePath);
 };
 
 Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
-  if (this.extensions == null) return relativePath;
+  if (this.extensions === null) return relativePath;
 
   for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
     var ext = this.extensions[i];
     if (relativePath.slice(-ext.length - 1) === '.' + ext) {
-      if (this.targetExtension != null) {
+      if (this.targetExtension !== null) {
         relativePath =
             relativePath.slice(0, -ext.length) + this.targetExtension;
       }
@@ -137,7 +121,7 @@ Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
     }
   }
   return null;
-}
+};
 
 Filter.prototype.processAndCacheFile =
     function processAndCacheFile(srcDir, destDir, relativePath) {
@@ -172,7 +156,7 @@ Filter.prototype.processAndCacheFile =
         e.file = relativePath;
         e.treeDir = srcDir;
         throw e;
-      })
+      });
 
   function copyToCache() {
     var entry = {
@@ -203,18 +187,10 @@ Filter.prototype.processFile =
   if (outputEncoding === void 0) outputEncoding = 'utf8';
   var contents = fs.readFileSync(
       srcDir + '/' + relativePath, { encoding: inputEncoding });
-  var promise;
 
-  if (this.persistent) {
-    var key = this.cacheKeyProcessString(contents, relativePath);
-    promise = this._peristentCache.get(key).then(function(entry) {
-      return entry.isCached ? entry.value : self.processString(contents, relativePath);
-    });
-  } else {
-    promise = Promise.resolve(this.processString(contents, relativePath));
-  }
-
-  return promise.then(function asyncOutputFilteredFile(outputString) {
+  return this.processor.processString(this, contents, relativePath).then(
+    function asyncOutputFilteredFile(result) {
+      var outputString = result.string;
     var outputPath = self.getDestFilePath(relativePath);
     if (outputPath == null) {
       throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
@@ -225,9 +201,7 @@ Filter.prototype.processFile =
       encoding: outputEncoding
     });
 
-    if (self.persistent) {
-      return self._peristentCache.set(key, outputString);
-    }
+    return self.processor.done(self, result);
   });
 };
 
