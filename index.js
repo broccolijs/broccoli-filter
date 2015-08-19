@@ -108,12 +108,12 @@ Filter.prototype.canProcessFile =
 };
 
 Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
-  if (this.extensions === null) return relativePath;
+  if (this.extensions == null) return relativePath;
 
   for (var i = 0, ii = this.extensions.length; i < ii; ++i) {
     var ext = this.extensions[i];
     if (relativePath.slice(-ext.length - 1) === '.' + ext) {
-      if (this.targetExtension !== null) {
+      if (this.targetExtension != null) {
         relativePath =
             relativePath.slice(0, -ext.length) + this.targetExtension;
       }
@@ -188,9 +188,8 @@ Filter.prototype.processFile =
   var contents = fs.readFileSync(
       srcDir + '/' + relativePath, { encoding: inputEncoding });
 
-  return this.processor.processString(this, contents, relativePath).then(
-    function asyncOutputFilteredFile(result) {
-      var outputString = result.string;
+  return this.processor.processString(this, contents, relativePath).then(function asyncOutputFilteredFile(result) {
+    var outputString = result.string;
     var outputPath = self.getDestFilePath(relativePath);
     if (outputPath == null) {
       throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
