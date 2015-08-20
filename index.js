@@ -2,6 +2,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var mkdirpBulk = require('mkdirp-bulk');
 var mkdirp = require('mkdirp');
 var Promise = require('rsvp').Promise;
 var Plugin = require('broccoli-plugin');
@@ -50,28 +51,65 @@ function Filter(inputTree, options) {
   this._destFilePathCache = Object.create(null);
 }
 
+Filter.prototype._resetStats = function() {
+  this._stats = {
+    paths: 0,
+    stale: 0,
+    mkdirp: 0,
+    mkdirpCache: 0,
+    processed: 0,
+    unprocessed: 0,
+    hits: 0,
+    miss: 0,
+    prime: 0,
+    hash: 0,
+    processedTime: 0
+  };
+};
+
 Filter.prototype.build = function build() {
   var self = this;
+  var start = new Date();
+  this._resetStats();
   var srcDir = this.inputPaths[0];
   var destDir = this.outputPath;
-  var paths = walkSync(srcDir);
+  var paths = walkSync(srcDir).filter(Boolean);
+
+  self._stats.paths = paths.length;
+  self._stats.walkSyncTime = new Date() - start;
 
   this._cache.deleteExcept(paths).forEach(function(key) {
+    self._stats.stale++;
     fs.unlinkSync(this.cachePath + '/' + key);
   }, this);
+
+  self._stats.mkdirp += mkdirpBulk.sync(paths.map(function(p) {
+    return self.outputPath + '/' + p;
+  }));
+
+  if (this._cacheDirsPrimed === undefined) {
+    this._cacheDirsPrimed = true;
+    self._stats.mkdirp += mkdirpBulk.sync(paths.map(function(p) {
+      return self.cachePath + '/' + p;
+    }));
+  }
 
   return mapSeries(paths, function rebuildEntry(relativePath) {
     var destPath = destDir + '/' + relativePath;
     if (relativePath.slice(-1) === '/') {
-      mkdirp.sync(destPath);
     } else {
       if (self.canProcessFile(relativePath)) {
+        self._stats.processed++;
         return self.processAndCacheFile(srcDir, destDir, relativePath);
       } else {
+        self._stats.unprocessed++;
         var srcPath = srcDir + '/' + relativePath;
         symlinkOrCopySync(srcPath, destPath);
       }
     }
+  }).finally(function() {
+    self._cacheDirsPrimed = false;
+    self._debug('build %o in %dms', self._stats, new Date() - start);
   });
 };
 
@@ -98,30 +136,35 @@ Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
 
 Filter.prototype.processAndCacheFile =
     function processAndCacheFile(srcDir, destDir, relativePath) {
+  var start = new Date();
   var self = this;
   var cacheEntry = this._cache.get(relativePath);
   var outputRelativeFile = self.getDestFilePath(relativePath);
+  var result;
 
   if (cacheEntry) {
+    this._stats.hash++;
     var hashResult = hash(srcDir, cacheEntry.inputFile);
 
     if (cacheEntry.hash.hash === hashResult.hash) {
-      this._debug('cache hit: %s', relativePath);
+      this._stats.hits++;
 
-      return symlinkOrCopyFromCache(cacheEntry, destDir, outputRelativeFile);
+      symlinkOrCopySync(cacheEntry.cacheFile, destDir + '/' + outputRelativeFile);
+      this._stats.processedTime += new Date() - start;
+      return result;
     } else {
-      this._debug('cache miss: %s \n  - previous: %o \n  - next:     %o ', relativePath, cacheEntry.hash.key, hashResult.key);
+      this._stats.miss++;
     }
 
   } else {
-    this._debug('cache prime: %s', relativePath);
+    this._stats.prime++;
   }
 
   return Promise.resolve().
       then(function asyncProcessFile() {
         return self.processFile(srcDir, destDir, relativePath);
       }).
-      then(copyToCache,
+      then(linkFromCache,
       // TODO(@caitp): error wrapper is for API compat, but is not particularly
       // useful.
       // istanbul ignore next
@@ -130,9 +173,13 @@ Filter.prototype.processAndCacheFile =
         e.file = relativePath;
         e.treeDir = srcDir;
         throw e;
-      })
+      }).finally(function() {
+        self._stats.processedTime += new Date() - start;
+      });
 
-  function copyToCache() {
+  function linkFromCache() {
+    self._stats.hash++;
+
     var entry = {
       hash: hash(srcDir, relativePath),
       inputFile: relativePath,
@@ -140,13 +187,14 @@ Filter.prototype.processAndCacheFile =
       cacheFile: self.cachePath + '/' + outputRelativeFile
     };
 
-    if (fs.existsSync(entry.cacheFile)) {
-      fs.unlinkSync(entry.cacheFile);
-    } else {
+    if (fs.existsSync(entry.outputFile)) {
+      fs.unlinkSync(entry.outputFile);
+    } else if (self._cacheDirsPrimed === false) {
+      self._stats.mkdirpCache++;
       mkdirp.sync(path.dirname(entry.cacheFile));
     }
 
-    copyDereferenceSync(entry.outputFile, entry.cacheFile);
+    symlinkOrCopySync(entry.cacheFile, entry.outputFile);
 
     return self._cache.set(relativePath, entry);
   }
@@ -168,8 +216,7 @@ Filter.prototype.processFile =
         if (outputPath == null) {
           throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
         }
-        outputPath = destDir + '/' + outputPath;
-        mkdirp.sync(path.dirname(outputPath));
+        outputPath = self.cachePath + '/' + outputPath;
         fs.writeFileSync(outputPath, outputString, {
           encoding: outputEncoding
         });
@@ -196,10 +243,4 @@ function hash(src, filePath) {
       key.mtime
     ])
   };
-}
-
-function symlinkOrCopyFromCache(entry, dest, relativePath) {
-  mkdirp.sync(path.dirname(entry.outputFile));
-
-  symlinkOrCopySync(entry.cacheFile, dest + '/' + relativePath);
 }
