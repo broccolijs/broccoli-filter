@@ -38,7 +38,7 @@ function Filter(inputTree, options) {
 
   Plugin.call(this, [inputTree]);
 
-  this.processor = new Processor();
+  this.processor = new Processor(options);
   this.processor.setStrategy(defaultProccessor);
 
   /* Destructuring assignment in node 0.12.2 would be really handy for this! */
@@ -52,11 +52,7 @@ function Filter(inputTree, options) {
     if (options.outputEncoding != null)
       this.outputEncoding = options.outputEncoding;
     if (options.persist) {
-      if (/^win/.test(process.platform)) {
-        console.log('Unfortunately persistent cache is currently not available on windows based systems. Please see https://github.com/stefanpenner/hash-for-dep/issues/8.');
-      } else {
-        this.processor.setStrategy(require('./lib/strategies/persistent'));
-      }
+      this.processor.setStrategy(require('./lib/strategies/persistent'));
     }
   }
 
