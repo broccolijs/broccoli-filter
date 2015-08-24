@@ -293,10 +293,12 @@ describe('Filter', function() {
   describe('processFile', function() {
     beforeEach(function() {
       sinon.spy(fs, 'mkdirSync');
+      sinon.spy(fs, 'writeFileSync');
     });
 
     afterEach(function() {
       fs.mkdirSync.restore();
+      fs.writeFileSync.restore();
     });
 
     it('should not effect the current cwd', function() {
@@ -312,6 +314,10 @@ describe('Filter', function() {
       }).then(function(results) {
         expect(fs.mkdirSync.calledWith(path.join(process.cwd(), 'a'), 493)).to.eql(false);
         expect(fs.mkdirSync.calledWith(path.join(process.cwd(), 'a', 'bar'), 493)).to.eql(false);
+        expect(fs.writeFileSync.calledWith(path.join(process.cwd(), 'a', 'foo.js'), "Nicest dogs in need of homes")).to.eql(false);
+        return results.builder();
+      }).then(function() {
+        expect(fs.writeFileSync.calledWith(path.join(process.cwd(), 'a', 'foo.js'), "Nicest dogs in need of homes")).to.eql(false);
       });
     });
   });

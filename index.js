@@ -100,6 +100,7 @@ Filter.prototype.processAndCacheFile =
     function processAndCacheFile(srcDir, destDir, relativePath) {
   var self = this;
   var cacheEntry = this._cache.get(relativePath);
+  var outputRelativeFile = self.getDestFilePath(relativePath);
 
   if (cacheEntry) {
     var hashResult = hash(srcDir, cacheEntry.inputFile);
@@ -107,7 +108,7 @@ Filter.prototype.processAndCacheFile =
     if (cacheEntry.hash.hash === hashResult.hash) {
       this._debug('cache hit: %s', relativePath);
 
-      return symlinkOrCopyFromCache(cacheEntry, destDir, relativePath);
+      return symlinkOrCopyFromCache(cacheEntry, destDir, outputRelativeFile);
     } else {
       this._debug('cache miss: %s \n  - previous: %o \n  - next:     %o ', relativePath, cacheEntry.hash.key, hashResult.key);
     }
@@ -135,8 +136,8 @@ Filter.prototype.processAndCacheFile =
     var entry = {
       hash: hash(srcDir, relativePath),
       inputFile: relativePath,
-      outputFile: destDir + '/' + self.getDestFilePath(relativePath),
-      cacheFile: self.cachePath + '/' + relativePath
+      outputFile: destDir + '/' + outputRelativeFile,
+      cacheFile: self.cachePath + '/' + outputRelativeFile
     };
 
     if (fs.existsSync(entry.cacheFile)) {
