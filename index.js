@@ -126,7 +126,7 @@ Filter.prototype.processAndCacheFile =
       // useful.
       // istanbul ignore next
       function asyncProcessFileErrorWrapper(e) {
-        if (typeof e !== 'object') e = new Error('' + e);
+        if (typeof e !== 'object' || e === null) e = new Error('' + e);
         e.file = relativePath;
         e.treeDir = srcDir;
         throw e;
