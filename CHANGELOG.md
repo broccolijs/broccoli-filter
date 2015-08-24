@@ -1,5 +1,13 @@
 # master
 
+# 1.2.2
+
+* (Based on 1.2.0:) Fix file naming issue in caching code
+
+# 1.2.1
+
+* Temporarily revert to 1.1.0
+
 # 1.2.0
 
 * Replace with @caitp's cauliflower-filter implementation and @stefanpenner's tests
