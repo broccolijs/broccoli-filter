@@ -12,3 +12,5 @@ script:
 
 after_success:
   - cat ./coverage/lcov.info | npm run coveralls
+
+sudo: false
