@@ -51,29 +51,31 @@ function Filter(inputTree, options) {
 }
 
 Filter.prototype.build = function build() {
-  var self = this;
   var srcDir = this.inputPaths[0];
-  var destDir = this.outputPath;
   var paths = walkSync(srcDir);
 
   this._cache.deleteExcept(paths).forEach(function(key) {
     fs.unlinkSync(this.cachePath + '/' + key);
   }, this);
 
-  return mapSeries(paths, function rebuildEntry(relativePath) {
-    var destPath = destDir + '/' + relativePath;
-    if (relativePath.slice(-1) === '/') {
-      mkdirp.sync(destPath);
-    } else {
-      if (self.canProcessFile(relativePath)) {
-        return self.processAndCacheFile(srcDir, destDir, relativePath);
-      } else {
-        var srcPath = srcDir + '/' + relativePath;
-        symlinkOrCopySync(srcPath, destPath);
-      }
-    }
-  });
+  return mapSeries(paths, this.rebuildEntry, this);
 };
+
+Filter.prototype.rebuildEntry = function rebuildEntry(relativePath) {
+  var srcDir = this.inputPaths[0];
+  var destDir = this.outputPath;
+  var destPath = destDir + '/' + relativePath;
+  if (relativePath.slice(-1) === '/') {
+    mkdirp.sync(destPath);
+  } else {
+    if (this.canProcessFile(relativePath)) {
+      return this.processAndCacheFile(srcDir, destDir, relativePath);
+    } else {
+      var srcPath = srcDir + '/' + relativePath;
+      symlinkOrCopySync(srcPath, destPath);
+    }
+  }
+}
 
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
