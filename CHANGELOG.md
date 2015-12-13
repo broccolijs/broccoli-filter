@@ -1,5 +1,9 @@
 # master
 
+# 1.2.3
+
+* Update `walk-sync` dependency.
+
 # 1.2.2
 
 * (Based on 1.2.0:) Fix file naming issue in caching code
