@@ -17,7 +17,7 @@ class MultiFilter {
 
   /**
    * Abstract method `processString`: must be implemented on subclasses of
-   * Filter.
+   * MultiFilter.
    * 
    * The `addOutputFile` callback accepts two arguments `(contents: string, outputRelativeFilename: string)`
    * this file must be called to generate any side-effect files and make sure they are handled properly with
@@ -35,7 +35,7 @@ class MultiFilter {
    * `relativePath` to process the file with `processString`. Return a
    * different path to process the file with `processString` and rename it.
    *
-   * By default, if the options passed into the `Filter` constructor contain a
+   * By default, if the options passed into the `MultiFilter` constructor contain a
    * property `extensions`, and `targetExtension` is supplied, the first matching
    * extension in the list is replaced with the `targetExtension` option's value.
    */
