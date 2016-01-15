@@ -1,10 +1,11 @@
 {
-  "name": "broccoli-filter",
+  "name": "broccoli-multi-filter",
   "description": "Helper base class for Broccoli plugins that map input files into output files one-to-one",
   "version": "1.2.3",
   "author": [
     "Jo Liss <joliss42@gmail.com>",
-    "Caitlin Potter <caitpotter88@gmail.com>"
+    "Caitlin Potter <caitpotter88@gmail.com>",
+    "Chris Eppstein <chris@eppsteins.net>"
   ],
   "main": "index.js",
   "scripts": {
@@ -17,12 +18,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/broccolijs/broccoli-filter"
+    "url": "https://github.com/chriseppstein/broccoli-multi-filter"
   },
   "keywords": [
     "broccoli-helper",
     "filter",
-    "cache"
+    "cache",
+    "broccoli-filter"
   ],
   "dependencies": {
     "broccoli-kitchen-sink-helpers": "^0.2.7",
