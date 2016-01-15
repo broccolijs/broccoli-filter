@@ -98,3 +98,10 @@ var node = new Awk('docs', 'ES6', 'ECMAScript 2015');
 
 module.exports = node;
 ```
+
+## Converting from `broccoli-filter`
+
+1. Change your require to `broccoli-multi-filter`.
+2. Make sure tests still pass.
+3. Add the `addOutputFile` argument to your implementation of `processString`.
+4. Call `addOutputFile` to generate any additional files you need to generate.
