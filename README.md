@@ -1,30 +1,31 @@
-# broccoli-filter
-
-[![Build Status](https://travis-ci.org/broccolijs/broccoli-filter.svg?branch=master)](https://travis-ci.org/broccolijs/broccoli-filter)
-[![Build status](https://ci.appveyor.com/api/projects/status/hc68s0vbn9di4ehi/branch/master?svg=true)](https://ci.appveyor.com/project/joliss/broccoli-filter/branch/master)
+# broccoli-multi-filter
 
 Helper base class for Broccoli plugins that map input files into output files
-one-to-one.
+one-to-many. This class is a drop-in replacement for [`broccoli-filter`](https://github.com/broccolijs/broccoli-filter).
 
 ## API
 
 ```js
-class Filter {
+class MultiFilter {
   /**
    * Abstract base-class for filtering purposes.
    *
    * Enforces that it is invoked on an instance of a class which prototypically
    * inherits from Filter, and which is not itself Filter.
    */
-  constructor(inputNode: BroccoliNode, options: FilterOptions): Filter;
+  constructor(inputNode: BroccoliNode, options: FilterOptions): MultiFilter;
 
   /**
    * Abstract method `processString`: must be implemented on subclasses of
    * Filter.
+   * 
+   * The `addOutputFile` callback accepts two arguments `(contents: string, outputRelativeFilename: string)`
+   * this file must be called to generate any side-effect files and make sure they are handled properly with
+   * the caching layer.
    *
    * The return value is written as the contents of the output file
    */
-  abstract processString(contents: string, relativePath: string): string;
+  abstract processString(contents: string, relativePath: string, addOutputFile: Function): string;
 
   /**
    * Virtual method `getDestFilePath`: determine whether the source file should
@@ -63,15 +64,16 @@ instead of being passed into the constructor.
 ### Example Usage
 
 ```js
-var Filter = require('broccoli-filter');
+var MultiFilter = require('broccoli-multi-filter');
 
-Awk.prototype = Object.create(Filter.prototype);
+Awk.prototype = Object.create(MultiFilter.prototype);
 Awk.prototype.constructor = Awk;
 function Awk(inputNode, search, replace, options) {
   options = options || {};
-  Filter.call(this, inputNode, {
+  MultiFilter.call(this, inputNode, {
     annotation: options.annotation
   });
+  this.keepOriginal = options.keepOriginal;
   this.search = search;
   this.replace = replace;
 }
@@ -79,7 +81,12 @@ function Awk(inputNode, search, replace, options) {
 Awk.prototype.extensions = ['txt'];
 Awk.prototype.targetExtension = 'txt';
 
-Awk.prototype.processString = function(content, relativePath) {
+Awk.prototype.processString = function(content, relativePath, addOutputFile) {
+  // Record the original content, but this could be a sourcemap file or any other side-effect.
+  // This can also be called multiple times -- once for each non-primary file.
+  if (this.keepOriginal) {
+    addOutputFile(content, relativePath + ".original");
+  }
   return content.replace(this.search, this.replace);
 };
 ```
@@ -91,34 +98,3 @@ var node = new Awk('docs', 'ES6', 'ECMAScript 2015');
 
 module.exports = node;
 ```
-
-## FAQ
-
-### Upgrading from 0.1.x to 1.x
-
-You must now call the base class constructor. For example:
-
-```js
-// broccoli-filter 0.1.x:
-function MyPlugin(inputTree) {
-  this.inputTree = inputTree;
-}
-
-// broccoli-filter 1.x:
-function MyPlugin(inputNode) {
-  Filter.call(this, inputNode);
-}
-```
-
-Note that "node" is simply new terminology for "tree".
-
-### Source Maps
-
-**Can this help with compilers that are almost 1:1, like a minifier that takes
-a `.js` and `.js.map` file and outputs a `.js` and `.js.map` file?**
-
-Not at the moment. I don't know yet how to implement this and still have the
-API look beautiful. We also have to make sure that caching works correctly, as
-we have to invalidate if either the `.js` or the `.js.map` file changes. My
-plan is to write a source-map-aware uglifier plugin to understand this use
-case better, and then extract common code back into this `Filter` base class.
