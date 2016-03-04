@@ -356,10 +356,27 @@ describe('MultiFilter', function() {
   var noPrep = function(subject) { return subject; };
   it("should generate two files per input file", function() {
     var builder = makeBuilder(KeepOriginalFilter, fixturePath, noPrep);
+    var lastDest;
     return builder('dir',{}).then(function(results) {
-      var kof = results.subject;
       expect(read(results.directory + '/a/foo.js')).
-          to.equal(read(results.directory + '/a/foo.js.original'));
+          to.equal('Nicest dogs in need of homes');
+      expect(read(results.directory + '/a/foo.js.original')).
+          to.equal('Nicest dogs in need of homes');
+      fs.writeFileSync(fixturePath + '/dir/a/foo.js', 'Nicest dogs in need of homes too');
+      return results.builder();
+    }).then(function (results) {
+      expect(read(results.directory + '/a/foo.js')).
+          to.equal('Nicest dogs in need of homes too');
+      expect(read(results.directory + '/a/foo.js.original')).
+          to.equal('Nicest dogs in need of homes too');
+      fs.writeFileSync(fixturePath + '/dir/a/foo.js', 'Nicest dogs in need of homes');
+      return results.builder();
+    }).then(function(results) {
+      expect(read(results.directory + '/a/foo.js')).
+          to.equal('Nicest dogs in need of homes');
+      expect(read(results.directory + '/a/foo.js.original')).
+          to.equal('Nicest dogs in need of homes');
+      return results.builder();
     });
   });
 });

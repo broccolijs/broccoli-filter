@@ -108,7 +108,7 @@ Filter.prototype.processAndCacheFile =
     if (cacheEntry.hash.hash === hashResult.hash) {
       this._debug('cache hit: %s', relativePath);
 
-      return symlinkOrCopyFromCache(cacheEntry, destDir, outputRelativeFile);
+      return symlinkOrCopyFromCache(cacheEntry);
     } else {
       this._debug('cache miss: %s \n  - previous: %o \n  - next:     %o ', relativePath, cacheEntry.hash.key, hashResult.key);
     }
@@ -213,10 +213,10 @@ function hash(src, filePath) {
   };
 }
 
-function symlinkOrCopyFromCache(entry, dest, relativePath) {
+function symlinkOrCopyFromCache(entry) {
   entry.results.forEach(function(result) {
     mkdirp.sync(path.dirname(result.output));
 
-    symlinkOrCopySync(result.cache, dest + '/' + relativePath);
+    symlinkOrCopySync(result.cache, result.output);
   });
 }
