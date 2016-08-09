@@ -8,7 +8,7 @@ describe('keyForFile', function () {
   describe('when given a path to a directory', function () {
     it('throws an error', function () {
       expect(function () {
-        keyForFile('./test/fixtures/directory');
+        keyForFile('./test/fixtures/dir');
       }).to.throw(/cannot diff directory/i);
     });
   });

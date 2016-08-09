@@ -13,8 +13,13 @@ var copyDereferenceSync = require('copy-dereference').sync;
 var Cache = require('./lib/cache');
 var debugGenerator = require('debug');
 var keyForFile = require('./lib/key-for-file');
+var PersistentCache = require('async-disk-cache');
+var md5Hex = require('md5-hex');
+var Processor = require('./lib/processor');
+var defaultProccessor = require('./lib/strategies/default');
 
 module.exports = Filter;
+
 
 Filter.prototype = Object.create(Plugin.prototype);
 Filter.prototype.constructor = Filter;
@@ -33,6 +38,9 @@ function Filter(inputTree, options) {
 
   Plugin.call(this, [inputTree]);
 
+  this.processor = new Processor(options);
+  this.processor.setStrategy(defaultProccessor);
+
   /* Destructuring assignment in node 0.12.2 would be really handy for this! */
   if (options) {
     if (options.extensions != null)
@@ -43,7 +51,12 @@ function Filter(inputTree, options) {
       this.inputEncoding = options.inputEncoding;
     if (options.outputEncoding != null)
       this.outputEncoding = options.outputEncoding;
+    if (options.persist) {
+      this.processor.setStrategy(require('./lib/strategies/persistent'));
+    }
   }
+
+  this.processor.init(this);
 
   this._cache = new Cache();
   this._canProcessCache = Object.create(null);
@@ -75,6 +88,26 @@ Filter.prototype.build = function build() {
   });
 };
 
+/* @public
+ *
+ * @method baseDir
+ * @returns {String} absolute path to the root of the filter...
+ */
+Filter.prototype.baseDir = function() {
+  throw Error('Filter must implement prototype.baseDir');
+};
+
+/**
+ * @public
+ *
+ * optionally override this to build a more rhobust cache key
+ * @param  {String} string The contents of a file that is being processed
+ * @return {String}        A cache key
+ */
+Filter.prototype.cacheKeyProcessString = function(string /*, relativePath*/) {
+  return md5Hex(string);
+};
+
 Filter.prototype.canProcessFile =
     function canProcessFile(relativePath) {
   return !!this.getDestFilePath(relativePath);
@@ -94,7 +127,7 @@ Filter.prototype.getDestFilePath = function getDestFilePath(relativePath) {
     }
   }
   return null;
-}
+};
 
 Filter.prototype.processAndCacheFile =
     function processAndCacheFile(srcDir, destDir, relativePath) {
@@ -130,7 +163,7 @@ Filter.prototype.processAndCacheFile =
         e.file = relativePath;
         e.treeDir = srcDir;
         throw e;
-      })
+      });
 
   function copyToCache() {
     var entry = {
@@ -162,18 +195,20 @@ Filter.prototype.processFile =
   var contents = fs.readFileSync(
       srcDir + '/' + relativePath, { encoding: inputEncoding });
 
-  return Promise.resolve(this.processString(contents, relativePath)).
-      then(function asyncOutputFilteredFile(outputString) {
-        var outputPath = self.getDestFilePath(relativePath);
-        if (outputPath == null) {
-          throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
-        }
-        outputPath = destDir + '/' + outputPath;
-        mkdirp.sync(path.dirname(outputPath));
-        fs.writeFileSync(outputPath, outputString, {
-          encoding: outputEncoding
-        });
-      });
+  return this.processor.processString(this, contents, relativePath).then(function asyncOutputFilteredFile(result) {
+    var outputString = result.string;
+    var outputPath = self.getDestFilePath(relativePath);
+    if (outputPath == null) {
+      throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
+    }
+    outputPath = destDir + '/' + outputPath;
+    mkdirp.sync(path.dirname(outputPath));
+    fs.writeFileSync(outputPath, outputString, {
+      encoding: outputEncoding
+    });
+
+    return self.processor.done(self, result);
+  });
 };
 
 Filter.prototype.processString =
