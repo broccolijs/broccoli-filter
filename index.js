@@ -108,7 +108,7 @@ Filter.prototype.processAndCacheFile =
     if (cacheEntry.hash.hash === hashResult.hash) {
       this._debug('cache hit: %s', relativePath);
 
-      return symlinkOrCopyFromCache(cacheEntry, destDir, outputRelativeFile);
+      return symlinkOrCopyFromCache(cacheEntry);
     } else {
       this._debug('cache miss: %s \n  - previous: %o \n  - next:     %o ', relativePath, cacheEntry.hash.key, hashResult.key);
     }
@@ -117,9 +117,29 @@ Filter.prototype.processAndCacheFile =
     this._debug('cache prime: %s', relativePath);
   }
 
+  cacheEntry = {
+    hash: hash(srcDir, relativePath),
+    inputFile: relativePath,
+    results: [
+      {
+        output: destDir + '/' + outputRelativeFile,
+        cache: self.cachePath + '/' + outputRelativeFile
+      }
+    ]
+  };
+
+  function addOutputFile(contents, outputRelativeFilename) {
+    var outputPath = path.join(destDir, outputRelativeFilename);
+    fs.writeFileSync(outputPath, contents, { encoding: self.outputEncoding });
+    cacheEntry.results.push({
+      output: destDir + '/' + outputRelativeFilename,
+      cache: self.cachePath + '/' + outputRelativeFilename
+    });
+  }
+
   return Promise.resolve().
       then(function asyncProcessFile() {
-        return self.processFile(srcDir, destDir, relativePath);
+        return self.processFile(srcDir, destDir, relativePath, addOutputFile);
       }).
       then(copyToCache,
       // TODO(@caitp): error wrapper is for API compat, but is not particularly
@@ -133,27 +153,22 @@ Filter.prototype.processAndCacheFile =
       })
 
   function copyToCache() {
-    var entry = {
-      hash: hash(srcDir, relativePath),
-      inputFile: relativePath,
-      outputFile: destDir + '/' + outputRelativeFile,
-      cacheFile: self.cachePath + '/' + outputRelativeFile
-    };
+    cacheEntry.results.forEach(function(result) {
+      if (fs.existsSync(result.cache)) {
+        fs.unlinkSync(result.cache);
+      } else {
+        mkdirp.sync(path.dirname(result.cache));
+      }
 
-    if (fs.existsSync(entry.cacheFile)) {
-      fs.unlinkSync(entry.cacheFile);
-    } else {
-      mkdirp.sync(path.dirname(entry.cacheFile));
-    }
+      copyDereferenceSync(result.output, result.cache);
+    });
 
-    copyDereferenceSync(entry.outputFile, entry.cacheFile);
-
-    return self._cache.set(relativePath, entry);
+    return self._cache.set(relativePath, cacheEntry);
   }
 };
 
 Filter.prototype.processFile =
-    function processFile(srcDir, destDir, relativePath) {
+    function processFile(srcDir, destDir, relativePath, addOutputFile) {
   var self = this;
   var inputEncoding = this.inputEncoding;
   var outputEncoding = this.outputEncoding;
@@ -162,7 +177,7 @@ Filter.prototype.processFile =
   var contents = fs.readFileSync(
       srcDir + '/' + relativePath, { encoding: inputEncoding });
 
-  return Promise.resolve(this.processString(contents, relativePath)).
+  return Promise.resolve(this.processString(contents, relativePath, addOutputFile)).
       then(function asyncOutputFilteredFile(outputString) {
         var outputPath = self.getDestFilePath(relativePath);
         if (outputPath == null) {
@@ -177,7 +192,7 @@ Filter.prototype.processFile =
 };
 
 Filter.prototype.processString =
-    function unimplementedProcessString(contents, relativePath) {
+    function unimplementedProcessString(contents, relativePath, addOutputFile) {
   throw new Error(
       'When subclassing broccoli-filter you must implement the ' +
       '`processString()` method.');
@@ -198,8 +213,10 @@ function hash(src, filePath) {
   };
 }
 
-function symlinkOrCopyFromCache(entry, dest, relativePath) {
-  mkdirp.sync(path.dirname(entry.outputFile));
+function symlinkOrCopyFromCache(entry) {
+  entry.results.forEach(function(result) {
+    mkdirp.sync(path.dirname(result.output));
 
-  symlinkOrCopySync(entry.cacheFile, dest + '/' + relativePath);
+    symlinkOrCopySync(result.cache, result.output);
+  });
 }

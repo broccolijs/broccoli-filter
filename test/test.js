@@ -52,6 +52,18 @@ function IncompleteFilter(inputTree, options) {
 
 inherits(IncompleteFilter, Filter);
 
+function KeepOriginalFilter(inputTree, options) {
+  if (!this) return new KeepOriginalFilter(inputTree, options);
+  Filter.call(this, inputTree, options);
+}
+inherits(KeepOriginalFilter, Filter);
+
+KeepOriginalFilter.prototype.processString = function(contents, relativePath, addOutputFile) {
+  addOutputFile(contents, relativePath + ".original");
+  return contents;
+}
+KeepOriginalFilter.extensions = ["js"];
+
 describe('Filter', function() {
   function makeBuilder(plugin, dir, prepSubject) {
     return makeTestHelper({
@@ -73,7 +85,7 @@ describe('Filter', function() {
   function write(relativePath, contents, encoding) {
     encoding = encoding === void 0 ? 'utf8' : encoding;
     mkdirp.sync(path.dirname(relativePath));
-    fs.writeFileSync(relativePath, contents, {
+    fs.writKeepOriginalFiltereFileSync(relativePath, contents, {
       encoding: encoding
     });
   }
@@ -319,6 +331,52 @@ describe('Filter', function() {
       }).then(function() {
         expect(fs.writeFileSync.calledWith(path.join(process.cwd(), 'a', 'foo.js'), "Nicest dogs in need of homes")).to.eql(false);
       });
+    });
+  });
+});
+
+describe('MultiFilter', function() {
+  function read(relativePath, encoding) {
+    encoding = encoding === void 0 ? 'utf8' : encoding;
+    return fs.readFileSync(relativePath, encoding);
+  }
+
+  function makeBuilder(plugin, dir, prepSubject) {
+    return makeTestHelper({
+      subject: plugin,
+      fixturePath: dir,
+      prepSubject: prepSubject
+    });
+  }
+
+  afterEach(function() {
+    return cleanupBuilders();
+  });
+
+  var noPrep = function(subject) { return subject; };
+  it("should generate two files per input file", function() {
+    var builder = makeBuilder(KeepOriginalFilter, fixturePath, noPrep);
+    var lastDest;
+    return builder('dir',{}).then(function(results) {
+      expect(read(results.directory + '/a/foo.js')).
+          to.equal('Nicest dogs in need of homes');
+      expect(read(results.directory + '/a/foo.js.original')).
+          to.equal('Nicest dogs in need of homes');
+      fs.writeFileSync(fixturePath + '/dir/a/foo.js', 'Nicest dogs in need of homes too');
+      return results.builder();
+    }).then(function (results) {
+      expect(read(results.directory + '/a/foo.js')).
+          to.equal('Nicest dogs in need of homes too');
+      expect(read(results.directory + '/a/foo.js.original')).
+          to.equal('Nicest dogs in need of homes too');
+      fs.writeFileSync(fixturePath + '/dir/a/foo.js', 'Nicest dogs in need of homes');
+      return results.builder();
+    }).then(function(results) {
+      expect(read(results.directory + '/a/foo.js')).
+          to.equal('Nicest dogs in need of homes');
+      expect(read(results.directory + '/a/foo.js.original')).
+          to.equal('Nicest dogs in need of homes');
+      return results.builder();
     });
   });
 });
