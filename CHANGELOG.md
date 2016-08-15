@@ -1,5 +1,19 @@
 # master
 
+# 1.2.4
+
+Changes
+
+* Update `broccoli-kitchen-sink-helpers`
+* Update `walk-sync`
+
+Development Changes
+
+* Update `broccoli-test-helpers`
+* Update `istanbul`
+* Update `minimatch`
+* update `Mocha`
+
 # 1.2.3
 
 * Update `walk-sync` dependency.
