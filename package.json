@@ -27,7 +27,7 @@
     "broccoli-filter"
   ],
   "dependencies": {
-    "broccoli-kitchen-sink-helpers": "^0.2.7",
+    "broccoli-kitchen-sink-helpers": "^0.3.1",
     "broccoli-plugin": "^1.0.0",
     "copy-dereference": "^1.0.0",
     "debug": "^2.2.0",
