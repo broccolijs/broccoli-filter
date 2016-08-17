@@ -30,6 +30,7 @@
     "copy-dereference": "^1.0.0",
     "debug": "^2.2.0",
     "mkdirp": "^0.5.1",
+    "mkdirp-bulk": "^1.0.0",
     "promise-map-series": "^0.2.1",
     "rsvp": "^3.0.18",
     "symlink-or-copy": "^1.0.1",
