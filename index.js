@@ -202,8 +202,12 @@ function symlinkOrCopyFromCache(entry, dest, relativePath) {
   try {
     symlinkOrCopySync(entry.cacheFile, dest + '/' + relativePath);
   } catch(err) {
-    // assume that the destination directory is missing create it and retry
-    mkdirp.sync(path.dirname(entry.outputFile))
-    symlinkOrCopySync(entry.cacheFile, dest + '/' + relativePath)
+    if (err.code === 'ENOENT') {
+      // assume that the destination directory is missing create it and retry
+      mkdirp.sync(path.dirname(entry.outputFile))
+      symlinkOrCopySync(entry.cacheFile, dest + '/' + relativePath)
+    } else {
+      throw err;
+    }
   }
 }
