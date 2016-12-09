@@ -20,6 +20,8 @@ var rimraf = require('rimraf').sync;
 var walkSync = require('walk-sync');
 var copy = require('copy-dereference').sync;
 
+var HbsToJsFilter = require('./test-filters').HbsToJsFilter;
+
 var fixturePath = path.join(process.cwd(), 'test', 'fixtures');
 
 function ReplaceFilter(inputTree, options) {
@@ -190,8 +192,17 @@ describe('Filter', function() {
     })).to.eventually.be.rejectedWith(Error, /getDestFilePath.* is null/);
   });
 
-  it('should purge cache', function() {
+  it.only('should not blow up if called on a tree with existing file', function() {
+    var builder = makeBuilder(HbsToJsFilter, fixturePath, function(awk) {
+      awk.canProcessFile = function() { return false; };
 
+      return awk;
+    });
+
+    return expect(builder('symlink-dir', {})).to.not.throw;
+  });
+
+  it('should purge cache', function() {
     var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
       return awk;
     });
