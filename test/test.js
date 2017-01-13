@@ -41,6 +41,7 @@ ReplaceFilter.prototype.getDestFilePath = function(relativePath) {
 };
 
 ReplaceFilter.prototype.processString = function(contents, relativePath) {
+  console.log('processString', relativePath);
   var result = contents.replace(this._search, this._replacement);
   return result;
 };
@@ -191,7 +192,6 @@ describe('Filter', function() {
   });
 
   it('should purge cache', function() {
-
     var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
       return awk;
     });
@@ -218,10 +218,14 @@ describe('Filter', function() {
       fs.writeFileSync(fileForRemoval, 'Nicest cats in need of homes');
     }).then(function(results) {
       expect(existsSync(fileForRemoval)).to.be.true;
+      debugger;
 
       return results.builder();
     }).then(function(results) {
+      debugger;
+
       expect(existsSync(results.directory + '/a/foo.js'), 'OUTPUT: a/foo.js should be once again present').to.be.true;
+      // TODO: also ensure bar/bar.js is not lost
     });
   });
 
