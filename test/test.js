@@ -41,7 +41,6 @@ ReplaceFilter.prototype.getDestFilePath = function(relativePath) {
 };
 
 ReplaceFilter.prototype.processString = function(contents, relativePath) {
-  console.log('processString', relativePath);
   var result = contents.replace(this._search, this._replacement);
   return result;
 };
@@ -154,7 +153,7 @@ describe('Filter', function() {
 
   it('should processString only when canProcessFile returns true',
       function() {
-    var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
+        var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
       sinon.spy(awk, 'processString');
       return awk;
     });
@@ -164,6 +163,7 @@ describe('Filter', function() {
       search: 'dogs',
       replace: 'cats'
     }).then(function(results) {
+
       var awk = results.subject;
       expect(read(results.directory + '/a/README.md')).
           to.equal('Nicest cats in need of homes');
@@ -210,24 +210,29 @@ describe('Filter', function() {
 
       return results.builder();
     }).then(function(results) {
-      expect(existsSync(results.directory + '/a/README.md'), 'OUTPUT: a/foo.js should NO LONGER be present').to.be.false;
 
-      expect(existsSync(fileForRemoval)).to.be.false;
+       expect(existsSync(results.directory + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.false;
+       expect(existsSync(fileForRemoval)).to.be.false;
+
       return results;
     }).finally(function() {
-      fs.writeFileSync(fileForRemoval, 'Nicest cats in need of homes');
+
+     fs.writeFileSync(fileForRemoval, 'Nicest cats in need of homes');
+
+
     }).then(function(results) {
+
       expect(existsSync(fileForRemoval)).to.be.true;
-      debugger;
 
       return results.builder();
     }).then(function(results) {
-      debugger;
 
       expect(existsSync(results.directory + '/a/foo.js'), 'OUTPUT: a/foo.js should be once again present').to.be.true;
-      // TODO: also ensure bar/bar.js is not lost
+      expect(existsSync(results.directory + '/a/bar/bar.js'), 'OUTPUT: a/bar/bar.js should be once again present').to.be.true;
+
     });
   });
+
 
   it('replaces stale entries', function() {
     var fileForChange = path.join(fixturePath, 'dir', 'a', 'README.md');
