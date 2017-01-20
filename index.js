@@ -33,7 +33,9 @@ function Filter(inputTree, options) {
 
   this._debug = debugGenerator(name);
 
-  Plugin.call(this, [inputTree]);
+  Plugin.call(this, [inputTree], {
+    fsFacade: true
+  });
 
   /* Destructuring assignment in node 0.12.2 would be really handy for this! */
   if (options) {
@@ -51,34 +53,34 @@ function Filter(inputTree, options) {
 
 
   //newly added
-  this._in = this._out = undefined;
+  //this._in = this._out = undefined;
 }
 
-//newly added
-Object.defineProperty(Filter.prototype, 'in', {
-  get() {
-    if (this._in) {
-      return this._in;
-    }
-    this._in = (new FSTree({
-      root: this.inputPaths[0],
-    }));
-    return this._in;
-  }
-});
-
-// should be moved to broccoli-plugin
-Object.defineProperty(Filter.prototype, 'out', {
-  get() {
-    if (this._out) {
-      return this._out;
-    }
-    this._out = (new FSTree({
-      root: this.outputPath
-    }));
-    return this._out;
-  }
-});
+// //newly added
+// Object.defineProperty(Filter.prototype, 'in', {
+//   get() {
+//     if (this._in) {
+//       return this._in;
+//     }
+//     this._in = (new FSTree({
+//       root: this.inputPaths[0],
+//     }));
+//     return this._in;
+//   }
+// });
+//
+// // should be moved to broccoli-plugin
+// Object.defineProperty(Filter.prototype, 'out', {
+//   get() {
+//     if (this._out) {
+//       return this._out;
+//     }
+//     this._out = (new FSTree({
+//       root: this.outputPath
+//     }));
+//     return this._out;
+//   }
+// });
 
 
 Filter.prototype.build = function build() {
@@ -87,11 +89,11 @@ Filter.prototype.build = function build() {
   var destDir = this.outputPath;
   var paths = walkSync(srcDir);
 
-  this._in = undefined;
-  this._out = undefined;
+  // this._in = undefined;
+  // this._out = undefined;
 
-  this.out.start();
-  this.in.start();
+  // this.out.start();
+  // this.in.start();
 
   this._cache.deleteExcept(paths).forEach(function (key) {
    fs.unlinkSync(this.cachePath + '/' + key);
@@ -101,20 +103,20 @@ Filter.prototype.build = function build() {
 
   return mapSeries(paths, function rebuildEntry(relativePath) {
     if (relativePath.slice(-1) === '/') {
-      self._out.mkdirpSync(relativePath);
+      self.out.mkdirpSync(relativePath);
     } else {
       if (self.canProcessFile(relativePath)) {
         return self.processAndCacheFile(srcDir, destDir, relativePath);
       } else {
         var srcPath = srcDir + '/' + relativePath;
-        self._out.symlinkSync(srcPath, relativePath);
+        self.out.symlinkSync(srcPath, relativePath);
       }
     }
-
-  }).then(function() {
-    self.in.stop();
-    self.out.stop();
-  });
+  })
+  // }).then(function() {
+  //   self.in.stop();
+  //   self.out.stop();
+  // });
 };
 
 Filter.prototype.canProcessFile =
@@ -150,7 +152,7 @@ Filter.prototype.processAndCacheFile =
     if (cacheEntry.hash.hash === hashResult.hash) {
       this._debug('cache hit: %s', relativePath);
 
-      return symlinkOrCopyFromCache(cacheEntry, destDir, outputRelativeFile, this._out);
+      return symlinkOrCopyFromCache(cacheEntry, destDir, outputRelativeFile, this.out);
     } else {
       this._debug('cache miss: %s \n  - previous: %o \n  - next:     %o ', relativePath, cacheEntry.hash.key, hashResult.key);
     }
@@ -202,7 +204,7 @@ Filter.prototype.processFile =
   if (outputEncoding === void 0) outputEncoding = 'utf8';
 
 
-  var contents = this.in.readFileSync(relativePath, {encoding : inputEncoding});
+  var contents = this.in[0].readFileSync(relativePath, {encoding : inputEncoding});
 
   return Promise.resolve(this.processString(contents, relativePath)).then(function asyncOutputFilteredFile(outputString) {
         var outputPath = self.getDestFilePath(relativePath);
@@ -210,8 +212,8 @@ Filter.prototype.processFile =
           throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
         }
 
-        self._out.mkdirpSync(path.dirname(outputPath));
-        self._out.writeFileSync(outputPath,outputString, {
+        self.out.mkdirpSync(path.dirname(outputPath));
+        self.out.writeFileSync(outputPath,outputString, {
           encoding: outputEncoding
         });
       });
@@ -245,8 +247,8 @@ function symlinkOrCopyFromCache(entry, dest, relativePath, out) {
   } catch (err) {
     if (err.code === 'ENOENT') {
       // assume that the destination directory is missing create it and retry
-      out.mkdirpSync(path.dirname(relativePath));
-      self._out.symlinkSync(entry.cacheFile, relativePath);
+      qout.mkdirpSync(path.dirname(relativePath));
+      self.out.symlinkSync(entry.cacheFile, relativePath);
 
     } else {
       throw err;

@@ -26,7 +26,7 @@
   ],
   "dependencies": {
     "broccoli-kitchen-sink-helpers": "^0.3.1",
-    "broccoli-plugin": "^1.0.0",
+    "broccoli-plugin": "hjdivad/broccoli-plugin#hjdivad/change-tracking",
     "copy-dereference": "^1.0.0",
     "debug": "^2.2.0",
     "mkdirp": "^0.5.1",
