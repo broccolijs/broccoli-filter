@@ -151,7 +151,7 @@ Filter.prototype.processAndCacheFile =
       mkdirp.sync(path.dirname(entry.cacheFile));
     }
 
-    copyDereferenceSync(destDir + '/' + outputRelativeFile, entry.cacheFile);
+    copyDereferenceSync(self.out.resolvePath(outputRelativeFile), entry.cacheFile);
     return self._cache.set(relativePath, entry);
   }
 };
