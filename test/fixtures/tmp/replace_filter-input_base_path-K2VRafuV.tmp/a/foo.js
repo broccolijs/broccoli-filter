@@ -1,1 +1,0 @@
-Nicest dogs in need of homes
