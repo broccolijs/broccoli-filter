@@ -34,6 +34,7 @@ function Filter(inputTree, options) {
   this._debug = debugGenerator(name);
 
   Plugin.call(this, [inputTree], {
+    persistentOutput: true,
     fsFacade: true
   });
 
@@ -51,49 +52,13 @@ function Filter(inputTree, options) {
 
   this._cache = new Cache();
 
-
-  //newly added
-  //this._in = this._out = undefined;
 }
 
-// //newly added
-// Object.defineProperty(Filter.prototype, 'in', {
-//   get() {
-//     if (this._in) {
-//       return this._in;
-//     }
-//     this._in = (new FSTree({
-//       root: this.inputPaths[0],
-//     }));
-//     return this._in;
-//   }
-// });
-//
-// // should be moved to broccoli-plugin
-// Object.defineProperty(Filter.prototype, 'out', {
-//   get() {
-//     if (this._out) {
-//       return this._out;
-//     }
-//     this._out = (new FSTree({
-//       root: this.outputPath
-//     }));
-//     return this._out;
-//   }
-// });
-
-
 Filter.prototype.build = function build() {
-  var self = this;
   var srcDir = this.inputPaths[0];
   var destDir = this.outputPath;
   var paths = walkSync(srcDir);
 
-  // this._in = undefined;
-  // this._out = undefined;
-
-  // this.out.start();
-  // this.in.start();
 
   this._cache.deleteExcept(paths).forEach(function (key) {
    fs.unlinkSync(this.cachePath + '/' + key);
@@ -112,11 +77,7 @@ Filter.prototype.build = function build() {
         self.out.symlinkSync(srcPath, relativePath);
       }
     }
-  })
-  // }).then(function() {
-  //   self.in.stop();
-  //   self.out.stop();
-  // });
+  });
 };
 
 Filter.prototype.canProcessFile =
@@ -247,7 +208,7 @@ function symlinkOrCopyFromCache(entry, dest, relativePath, out) {
   } catch (err) {
     if (err.code === 'ENOENT') {
       // assume that the destination directory is missing create it and retry
-      qout.mkdirpSync(path.dirname(relativePath));
+      out.mkdirpSync(path.dirname(relativePath));
       self.out.symlinkSync(entry.cacheFile, relativePath);
 
     } else {

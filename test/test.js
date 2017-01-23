@@ -207,11 +207,13 @@ describe('Filter', function() {
 
       expect(existsSync(fileForRemoval)).to.be.false;
       expect(existsSync(results.directory + '/a/README.md')).to.be.true;
+      expect(existsSync(results.subject.cachePath + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.true;
 
       return results.builder();
     }).then(function(results) {
 
-       expect(existsSync(results.directory + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.false;
+     //  expect(existsSync(results.directory + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.false;
+       expect(existsSync(results.subject.cachePath + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.false;
        expect(existsSync(fileForRemoval)).to.be.false;
 
       return results;
@@ -227,6 +229,7 @@ describe('Filter', function() {
       return results.builder();
     }).then(function(results) {
 
+      expect(existsSync(results.subject.cachePath + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.true;
       expect(existsSync(results.directory + '/a/foo.js'), 'OUTPUT: a/foo.js should be once again present').to.be.true;
       expect(existsSync(results.directory + '/a/bar/bar.js'), 'OUTPUT: a/bar/bar.js should be once again present').to.be.true;
 
@@ -249,9 +252,7 @@ describe('Filter', function() {
       var awk = results.subject;
 
       expect(existsSync(fileForChange)).to.be.true;
-
       fs.writeFileSync(fileForChange, 'such changes');
-
       expect(existsSync(fileForChange)).to.be.true;
 
       return results.builder();
@@ -261,8 +262,8 @@ describe('Filter', function() {
       fs.writeFileSync(fileForChange, 'such changes');
 
       expect(existsSync(fileForChange)).to.be.true;
-    }).then(function() {
-      fs.writeFileSync(fileForChange, 'Nicest cats in need of homes');
+    }).finally(function() {
+       fs.writeFileSync(fileForChange, 'Nicest cats in need of homes');
     });
   });
 
