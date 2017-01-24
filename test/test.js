@@ -212,7 +212,6 @@ describe('Filter', function() {
       return results.builder();
     }).then(function(results) {
 
-     //  expect(existsSync(results.directory + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.false;
        expect(existsSync(results.subject.cachePath + '/a/README.md'), 'OUTPUT: a/README.md should NO LONGER be present').to.be.false;
        expect(existsSync(fileForRemoval)).to.be.false;
 

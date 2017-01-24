@@ -209,7 +209,7 @@ function symlinkOrCopyFromCache(entry, dest, relativePath, out) {
     if (err.code === 'ENOENT') {
       // assume that the destination directory is missing create it and retry
       out.mkdirpSync(path.dirname(relativePath));
-      self.out.symlinkSync(entry.cacheFile, relativePath);
+      out.symlinkSync(entry.cacheFile, relativePath);
 
     } else {
       throw err;
