@@ -172,6 +172,31 @@ describe('Filter', function() {
     });
   });
 
+  it('should remove file when processString returns a falsy value', 
+    function() {
+      function RemovingFilter(inputTree, options) {
+        if (!this) return new RemovingFilter(inputTree, options);
+        Filter.call(this, inputTree, options);
+      }
+
+      inherits(RemovingFilter, Filter);
+
+      RemovingFilter.prototype.processString = function(content) {
+        return "Dogs... who needs dogs?" !== content;
+      }
+
+      var builder = makeBuilder(RemovingFilter, fixturePath, function(awk) {
+        return awk;
+      });
+
+      return builder('dir').then(function(results) {
+        expect(existsSync(results.directory + '/a/README.md')).to.be.true;
+        expect(existsSync(results.directory + '/a/foo.js')).to.be.true;
+        expect(existsSync(results.directory + '/a/bar/bar.js')).to.be.false;
+      });
+    }
+  );
+
   it('should complain if canProcessFile is true but getDestFilePath is null',
       function() {
     var builder = makeBuilder(ReplaceFilter, fixturePath, function(awk) {
@@ -321,4 +346,5 @@ describe('Filter', function() {
       });
     });
   });
+
 });
