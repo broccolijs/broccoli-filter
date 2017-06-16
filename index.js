@@ -39,10 +39,12 @@ function Filter(inputTree, options) {
       this.extensions = options.extensions;
     if (options.targetExtension != null)
       this.targetExtension = options.targetExtension;
-    if (options.inputEncoding != null)
-      this.inputEncoding = options.inputEncoding;
-    if (options.outputEncoding != null)
-      this.outputEncoding = options.outputEncoding;
+    
+    // not checking the value of options.inputEncoding or options.outputEncoding
+    // because setting null values is allowed as per docs:
+    // For binary files, pass null to receive a Buffer object in processString
+    this.inputEncoding = options.inputEncoding;
+    this.outputEncoding = options.outputEncoding;
   }
 
   this._cache = new Cache();
