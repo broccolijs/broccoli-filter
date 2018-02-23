@@ -117,8 +117,10 @@ Note that "node" is simply new terminology for "tree".
 **Can this help with compilers that are almost 1:1, like a minifier that takes
 a `.js` and `.js.map` file and outputs a `.js` and `.js.map` file?**
 
-Not at the moment. I don't know yet how to implement this and still have the
-API look beautiful. We also have to make sure that caching works correctly, as
-we have to invalidate if either the `.js` or the `.js.map` file changes. My
-plan is to write a source-map-aware uglifier plugin to understand this use
-case better, and then extract common code back into this `Filter` base class.
+Not at the moment. We don't know yet how to implement this and still have the
+API look beautiful. Such cases complicate the caching logic, as we have to make
+sure to rebuild a file if either the `.js` or the `.js.map` file changes.
+
+For now, your best bet is the
+[broccoli-multifilter](https://github.com/broccolijs/broccoli-multifilter)
+plugin base class.
