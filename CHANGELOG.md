@@ -1,5 +1,7 @@
 # master
 
+* Allow `null` value for inputEncoding and outputEncoding options
+
 # 1.2.4
 
 Changes

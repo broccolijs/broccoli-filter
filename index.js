@@ -33,15 +33,15 @@ function Filter(inputTree, options) {
 
   Plugin.call(this, [inputTree]);
 
-  /* Destructuring assignment in node 0.12.2 would be really handy for this! */
   if (options) {
     if (options.extensions != null)
       this.extensions = options.extensions;
     if (options.targetExtension != null)
       this.targetExtension = options.targetExtension;
-    if (options.inputEncoding != null)
+    // For encodings, `null` (buffers) is distinct from the default (UTF-8)
+    if (options.inputEncoding !== undefined)
       this.inputEncoding = options.inputEncoding;
-    if (options.outputEncoding != null)
+    if (options.outputEncoding !== undefined)
       this.outputEncoding = options.outputEncoding;
   }
 
@@ -157,8 +157,8 @@ Filter.prototype.processFile =
   var self = this;
   var inputEncoding = this.inputEncoding;
   var outputEncoding = this.outputEncoding;
-  if (inputEncoding === void 0) inputEncoding = 'utf8';
-  if (outputEncoding === void 0) outputEncoding = 'utf8';
+  if (inputEncoding === undefined) inputEncoding = 'utf8';
+  if (outputEncoding === undefined) outputEncoding = 'utf8';
   var contents = fs.readFileSync(
       srcDir + '/' + relativePath, { encoding: inputEncoding });
 
