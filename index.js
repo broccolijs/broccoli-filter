@@ -121,7 +121,11 @@ Filter.prototype.processAndCacheFile =
       then(function asyncProcessFile() {
         return self.processFile(srcDir, destDir, relativePath);
       }).
-      then(copyToCache,
+      then(function checkIfCacheNecessary(outputPath) {
+        if (outputPath) {
+          return copyToCache();
+        }
+      },
       // TODO(@caitp): error wrapper is for API compat, but is not particularly
       // useful.
       // istanbul ignore next
@@ -164,6 +168,9 @@ Filter.prototype.processFile =
 
   return Promise.resolve(this.processString(contents, relativePath)).
       then(function asyncOutputFilteredFile(outputString) {
+        if (!outputString) {
+          return;
+        }
         var outputPath = self.getDestFilePath(relativePath);
         if (outputPath == null) {
           throw new Error('canProcessFile("' + relativePath + '") is true, but getDestFilePath("' + relativePath + '") is null');
@@ -173,6 +180,7 @@ Filter.prototype.processFile =
         fs.writeFileSync(outputPath, outputString, {
           encoding: outputEncoding
         });
+        return outputPath;
       });
 };
 
