@@ -112,6 +112,13 @@ describe('Filter', function() {
   });
 
 
+  it('should throw if constructor is passed array of trees', function() {
+    expect(function() {
+      new IncompleteFilter(['.']);
+    }).to.throw(Error, /array was passed/);
+  });
+
+
   it('should throw if `processString` is not implemented', function() {
     expect(function() {
       new IncompleteFilter('.').processString('foo', 'fake_path');

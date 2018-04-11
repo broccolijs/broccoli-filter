@@ -24,6 +24,11 @@ function Filter(inputTree, options) {
     throw new TypeError('Filter is an abstract class and must be sub-classed');
   }
 
+  // Validate that a single node was passed in
+  if (Array.isArray(inputTree)) {
+    throw new Error('inputTree should be a single tree, array was passed');
+  }
+
   var name = 'broccoli-filter:' + (this.constructor.name);
   if (this.description) {
     name += ' > [' + this.description + ']';
